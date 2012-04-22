@@ -7,6 +7,9 @@
 
 #include <avr/eeprom.h>
 
+#define F_TWI    100000
+#define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
+
 int main(void){
 	configHardware();
 	packetbuf_endpoint_init();
@@ -15,18 +18,27 @@ int main(void){
 	sei();	
 	
 	for (;;){
+		for (uint8_t i = 0; i < 0x7F; i++){
+				TWIC.MASTER.ADDR = (i << 1);
+				_delay_us(100);
+				}
 		USB_Task(); // lower-priority USB polling, like control requests
 //		packetbuf_endpoint_poll();
 	}
 }
 
+void configTWI(void){
+	TWIC.MASTER.BAUD = TWI_BAUD;
+	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+	TWIC.MASTER.CTRLA |= TWI_MASTER_ENABLE_bm;
+}
+
 /* Configures the board hardware and chip peripherals for the project's functionality. */
 void configHardware(void){
 	USB_ConfigureClock();
+	configTWI();
 	PORTR.DIRSET = 1 << 1;
 	PORTR.OUTSET = 1 << 1;
-//	_delay_ms(50);
-//	PORTR.OUTCLR = 1 << 1;
 	USB_Init();
 }
 
@@ -53,7 +65,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				
 				return true;
 				
-			case 0xAA: // write to channel A
+			case 0xAA:
 				USB_ep0_send(0);
 				return true;
 				
