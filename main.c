@@ -16,21 +16,23 @@ int main(void){
 	
 	PMIC.CTRL = PMIC_LOLVLEN_bm;
 	sei();	
+
+	for (uint8_t i = 0; i < 0x7F; i++){
+		TWIC.MASTER.ADDR = (i << 1);
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+	}
 	
 	for (;;){
-		for (uint8_t i = 0; i < 0x7F; i++){
-				TWIC.MASTER.ADDR = (i << 1);
-				_delay_us(100);
-				}
 		USB_Task(); // lower-priority USB polling, like control requests
 //		packetbuf_endpoint_poll();
 	}
 }
 
 void configTWI(void){
+	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
 	TWIC.MASTER.BAUD = TWI_BAUD;
-	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-	TWIC.MASTER.CTRLA |= TWI_MASTER_ENABLE_bm;
+	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
+	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
 }
 
 /* Configures the board hardware and chip peripherals for the project's functionality. */
