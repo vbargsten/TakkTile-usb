@@ -25,8 +25,8 @@ void configHardware(void){
 	USB_ConfigureClock();
 	PORTR.DIRSET = 1 << 1;
 	PORTR.OUTSET = 1 << 1;
-	_delay_ms(50);
-	PORTR.OUTCLR = 1 << 1;
+//	_delay_ms(50);
+//	PORTR.OUTCLR = 1 << 1;
 	USB_Init();
 }
 
