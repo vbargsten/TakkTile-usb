@@ -58,7 +58,7 @@
 # To rebuild project do "make clean" then "make all".
 #----------------------------------------------------------------------------
 
-HW_PRODUCT=Nonolith CEE
+HW_PRODUCT=Nonolith tactar
 HW_VERSION=1.0
 FW_VERSION=$(shell git describe --always --dirty='*')
 
@@ -100,7 +100,7 @@ FORMAT = ihex
 
 
 # Target file name (without extension).
-TARGET = cee
+TARGET = tactar
 
 
 # Object files directory
@@ -453,7 +453,7 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 all: begin gccversion sizebefore build sizeafter end
 
 # Change the build target to build a HEX file or a library.
-build: elf hex cee.json
+build: elf hex tactar.json
 #eep lss sym
 #build: lib
 
@@ -713,8 +713,8 @@ bootload_only:
 	
 bootload: bootload_only update
 
-cee.json: cee.hex
-	python make_fwupdate.py cee.hex "$(FW_VERSION)"
+tactar.json: tactar.hex
+	python make_fwupdate.py tactar.hex "$(FW_VERSION)"
 
 # Listing of phony targets.
 .PHONY : all begin finish end sizebefore sizeafter gccversion \
