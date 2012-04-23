@@ -7,7 +7,7 @@
 
 #include <avr/eeprom.h>
 
-#define F_TWI    100000
+#define F_TWI    400000
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
 #define	ROW		1
@@ -25,11 +25,11 @@ int main(void){
 	// ping freescale sensor 
 	TWIC.MASTER.ADDR = 0x60 << 1;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
-	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 
 	// set RST high
 	TWIC.MASTER.ADDR = ADDRESS;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	
 	// ping freescale sensor
 	TWIC.MASTER.ADDR = 0x60 << 1;
@@ -52,7 +52,7 @@ int main(void){
 }
 
 void configTWI(void){
-//	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
+	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm; 
 	TWIC.MASTER.BAUD = TWI_BAUD;
 	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
 	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
