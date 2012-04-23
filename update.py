@@ -6,7 +6,9 @@ pathToBootloader = os.path.join(os.path.dirname(__file__), 'usb', 'bootloader')
 sys.path.append(pathToBootloader)
 
 from flash import *
-	
+
+time.sleep(.5)
+
 try:
 	b = Bootloader()
 	b.handle_args(sys.argv)
