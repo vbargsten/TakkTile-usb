@@ -11,9 +11,9 @@
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
 #define	ROW		1
-#define	SENSOR  2 
+#define	SENSOR  0 
 #define	STATE	1
-#define	ADDRESS	((((ROW << 3) | SENSOR ) << 1 ) | STATE)
+#define	ADDRESS	((ROW&0x0F) << 4 | (SENSOR&0x07) << 1  | STATE)
 
 int main(void){
 	configHardware();
@@ -22,15 +22,15 @@ int main(void){
 	PMIC.CTRL = PMIC_LOLVLEN_bm;
 	sei();	
 
-	// ping freescale sensor 
+	// ping mpl115a2
 	TWIC.MASTER.ADDR = 0x60 << 1;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
 
-	// set RST high
+	// enable mpl115a2
 	TWIC.MASTER.ADDR = ADDRESS;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
-	
-	// ping freescale sensor
+
+	// start conversion of pressure and temperature
 	TWIC.MASTER.ADDR = 0x60 << 1;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
 	TWIC.MASTER.DATA = 0x12;
@@ -38,21 +38,25 @@ int main(void){
 	TWIC.MASTER.DATA = 0x01;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
 
+	// wait for conversion to finish
 	_delay_ms(1);
 
+	// set address to start reading
 	TWIC.MASTER.ADDR = 0x60 << 1;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
 	TWIC.MASTER.DATA = 0x00;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
 
+	// configure for read
 	TWIC.MASTER.CTRLB &= ~TWI_MASTER_QCEN_bm; 
 	TWIC.MASTER.CTRLB |= TWI_MASTER_SMEN_bm; 
+	// read two bytes of pressure into foo and bar
 	TWIC.MASTER.ADDR = (0x60 << 1) | 1;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 	uint8_t foo = TWIC.MASTER.DATA;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 	uint8_t bar = TWIC.MASTER.DATA;
-	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc | TWI_MASTER_ACKACT_bm;
+	TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm;
 
 	for (;;){
 		USB_Task(); // lower-priority USB polling, like control requests
