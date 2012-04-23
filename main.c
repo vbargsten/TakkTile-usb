@@ -11,7 +11,7 @@
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
 #define	ROW		1
-#define	SENSOR	2
+#define	SENSOR  2 
 #define	STATE	1
 #define	ADDRESS	((((ROW << 3) | SENSOR ) << 1 ) | STATE)
 
@@ -29,21 +29,30 @@ int main(void){
 	// set RST high
 	TWIC.MASTER.ADDR = ADDRESS;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
-	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	
 	// ping freescale sensor
 	TWIC.MASTER.ADDR = 0x60 << 1;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
-	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-
-	// set RST low
-	TWIC.MASTER.ADDR = ADDRESS ^ 1;
+	TWIC.MASTER.DATA = 0x12;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.DATA = 0x01;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
 
-	// ping freescale sensor
+	_delay_ms(1);
+
 	TWIC.MASTER.ADDR = 0x60 << 1;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
-	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	TWIC.MASTER.DATA = 0x00;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+
+	TWIC.MASTER.CTRLB &= ~TWI_MASTER_QCEN_bm; 
+	TWIC.MASTER.CTRLB |= TWI_MASTER_SMEN_bm; 
+	TWIC.MASTER.ADDR = (0x60 << 1) | 1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+	uint8_t foo = TWIC.MASTER.DATA;
+	TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+	foo += 1;
 
 	for (;;){
 		USB_Task(); // lower-priority USB polling, like control requests
