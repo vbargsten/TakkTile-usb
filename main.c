@@ -48,11 +48,11 @@ int main(void){
 	TWIC.MASTER.CTRLB &= ~TWI_MASTER_QCEN_bm; 
 	TWIC.MASTER.CTRLB |= TWI_MASTER_SMEN_bm; 
 	TWIC.MASTER.ADDR = (0x60 << 1) | 1;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 	uint8_t foo = TWIC.MASTER.DATA;
-	TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
-	foo += 1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+	uint8_t bar = TWIC.MASTER.DATA;
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc | TWI_MASTER_ACKACT_bm;
 
 	for (;;){
 		USB_Task(); // lower-priority USB polling, like control requests
