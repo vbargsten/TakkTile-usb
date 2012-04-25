@@ -7,13 +7,10 @@
 
 #include <avr/eeprom.h>
 
-#define F_TWI    400000
+#define F_TWI    100000
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
 #define	ROW		1
-#define	SENSOR  0 
-#define	STATE	1
-#define	ADDRESS	((ROW&0x0F) << 4 | (SENSOR&0x07) << 1  | STATE)
 
 int main(void){
 	configHardware();
@@ -21,42 +18,33 @@ int main(void){
 	
 	PMIC.CTRL = PMIC_LOLVLEN_bm;
 	sei();	
+	uint8_t address;
 
-	// ping mpl115a2
-	TWIC.MASTER.ADDR = 0x60 << 1;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	// scan the bus
 
-	// enable mpl115a2
-	TWIC.MASTER.ADDR = ADDRESS;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
+	for (uint8_t i = 0; i < 5; i++) {
 
-	// start conversion of pressure and temperature
-	TWIC.MASTER.ADDR = 0x60 << 1;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
-	TWIC.MASTER.DATA = 0x12;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
-	TWIC.MASTER.DATA = 0x01;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+		address = ((ROW&0x0F) << 4 | (i&0x07) << 1) | 1;
 
-	// wait for conversion to finish
-	_delay_ms(1);
+		// enable mpl115a2
+		TWIC.MASTER.ADDR = address; 
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
+//		TWIC.MASTER.STATUS &= ~TWI_MASTER_RIF_bm;
+		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 
-	// set address to start reading
-	TWIC.MASTER.ADDR = 0x60 << 1;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
-	TWIC.MASTER.DATA = 0x00;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+		// ping mpl115a2
+		TWIC.MASTER.ADDR = 0x60 << 1;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+//		TWIC.MASTER.STATUS &= ~TWI_MASTER_WIF_bm;
+		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 
-	// configure for read
-	TWIC.MASTER.CTRLB &= ~TWI_MASTER_QCEN_bm; 
-	TWIC.MASTER.CTRLB |= TWI_MASTER_SMEN_bm; 
-	// read two bytes of pressure into foo and bar
-	TWIC.MASTER.ADDR = (0x60 << 1) | 1;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-	uint8_t foo = TWIC.MASTER.DATA;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-	uint8_t bar = TWIC.MASTER.DATA;
-	TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm;
+		// disable mpl115a2
+		TWIC.MASTER.ADDR = address^1;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	//TWIC.MASTER.CTRLC = TWI_MASTER_CMD_STOP_gc;
+	}
 
 	for (;;){
 		USB_Task(); // lower-priority USB polling, like control requests
