@@ -19,32 +19,100 @@ int main(void){
 	PMIC.CTRL = PMIC_LOLVLEN_bm;
 	sei();	
 	uint8_t address;
+	uint8_t i;
 
 	// scan the bus
 
-	for (uint8_t i = 0; i < 5; i++) {
+	i = 0;
+	address = ((ROW&0x0F) << 4 | (i&0x07) << 1) | 1;
 
-		address = ((ROW&0x0F) << 4 | (i&0x07) << 1) | 1;
+	// enable mpl115a2
+	TWIC.MASTER.ADDR = address; 
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 
-		// enable mpl115a2
-		TWIC.MASTER.ADDR = address; 
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
-//		TWIC.MASTER.STATUS &= ~TWI_MASTER_RIF_bm;
-		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	// ping mpl115a2
+	TWIC.MASTER.ADDR = 0x60 << 1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 
-		// ping mpl115a2
-		TWIC.MASTER.ADDR = 0x60 << 1;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
-//		TWIC.MASTER.STATUS &= ~TWI_MASTER_WIF_bm;
-		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	// disable mpl115a2
+	TWIC.MASTER.ADDR = address^1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 
-		// disable mpl115a2
-		TWIC.MASTER.ADDR = address^1;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
-		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	i = 1;
+	address = ((ROW&0x0F) << 4 | (i&0x07) << 1) | 1;
 
-	//TWIC.MASTER.CTRLC = TWI_MASTER_CMD_STOP_gc;
-	}
+	// enable mpl115a2
+	TWIC.MASTER.ADDR = address; 
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	// ping mpl115a2
+	TWIC.MASTER.ADDR = 0x60 << 1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	// disable mpl115a2
+	TWIC.MASTER.ADDR = address^1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	i = 2;
+	address = ((ROW&0x0F) << 4 | (i&0x07) << 1) | 1;
+
+	// enable mpl115a2
+	TWIC.MASTER.ADDR = address; 
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	// ping mpl115a2
+	TWIC.MASTER.ADDR = 0x60 << 1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	// disable mpl115a2
+	TWIC.MASTER.ADDR = address^1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	i = 3;
+	address = ((ROW&0x0F) << 4 | (i&0x07) << 1) | 1;
+
+	// enable mpl115a2
+	TWIC.MASTER.ADDR = address; 
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	// ping mpl115a2
+	TWIC.MASTER.ADDR = 0x60 << 1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	// disable mpl115a2
+	TWIC.MASTER.ADDR = address^1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	i = 4;
+	address = ((ROW&0x0F) << 4 | (i&0x07) << 1) | 1;
+
+	// enable mpl115a2
+	TWIC.MASTER.ADDR = address; 
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	// ping mpl115a2
+	TWIC.MASTER.ADDR = 0x60 << 1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
+	// disable mpl115a2
+	TWIC.MASTER.ADDR = address^1;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));	
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+
 
 	for (;;){
 		USB_Task(); // lower-priority USB polling, like control requests
