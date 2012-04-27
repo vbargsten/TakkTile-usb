@@ -22,24 +22,34 @@ int main(void){
 }
 
 uint8_t botherAddress(uint8_t address){
+	// set address to bother
 	TWIC.MASTER.ADDR = address;
+	// if address ends in one, wait for a read to finish
 	if (address & 1) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+	// if address ends in zero, wait for a write to finish
 	else while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+	// send STOP
 	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	// return 1 if NACK, 0 if ACK
 	return TWIC.MASTER.STATUS&TWI_MASTER_RXACK_bm;
 }
 
 void scanRow(uint8_t row){
-	for (uint8_t i = 0; i < 5; i++) {
-		uint8_t tinyAddr = ((row&0x0F) << 4 | (i&0x07) << 1);
+	for (uint8_t column = 0; column < 5; column++) {
+		// attiny address formula
+		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
+		// if the write address ACKs....
 		if (botherAddress(tinyAddr) == 0) {
+			// ping the MPL115A2
 			botherAddress(0xC0);
+			// then turn off the sensor with an address LSB of 1
 			botherAddress(tinyAddr^1);
 		}
 	}
 }
 
 void configTWI(void){
+	// quick command mode trips RIF/WIF as soon as the slave ACKs
 	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm; 
 	TWIC.MASTER.BAUD = TWI_BAUD;
 	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
