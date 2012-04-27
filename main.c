@@ -21,18 +21,18 @@ int main(void){
 	}
 }
 
-bool botherAddress(uint8_t address){
+uint8_t botherAddress(uint8_t address){
 	TWIC.MASTER.ADDR = address;
 	if (address & 1) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 	else while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
 	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-	return ~(TWIC.MASTER.STATUS&TWI_MASTER_RXACK_bm);
+	return TWIC.MASTER.STATUS&TWI_MASTER_RXACK_bm;
 }
 
 void scanRow(uint8_t row){
 	for (uint8_t i = 0; i < 5; i++) {
 		uint8_t tinyAddr = ((row&0x0F) << 4 | (i&0x07) << 1);
-		if (botherAddress(tinyAddr)) {
+		if (botherAddress(tinyAddr) == 0) {
 			botherAddress(0xC0);
 			botherAddress(tinyAddr^1);
 		}
