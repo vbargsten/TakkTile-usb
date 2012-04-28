@@ -34,18 +34,20 @@ uint8_t botherAddress(uint8_t address){
 	return TWIC.MASTER.STATUS&TWI_MASTER_RXACK_bm;
 }
 
-void scanRow(uint8_t row){
+uint8_t scanRow(uint8_t row){
+	uint8_t sensor_bm = 0;
 	for (uint8_t column = 0; column < 5; column++) {
 		// attiny address formula
 		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
 		// if the write address ACKs....
 		if (botherAddress(tinyAddr) == 0) {
 			// ping the MPL115A2
-			botherAddress(0xC0);
+			if ( botherAddress(0xC0) == 0 ) sensor_bm |= 1 << column;
 			// then turn off the sensor with an address LSB of 1
 			botherAddress(tinyAddr^1);
 		}
 	}
+	return sensor_bm;
 }
 
 
@@ -119,8 +121,8 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				return true;
 				
 			case 0x5C:
-				scanRow(req->wIndex);
-				USB_ep0_send(0);
+				ep0_buf_in[0] = scanRow(req->wIndex);
+				USB_ep0_send(1);
 				return true;
 
 			case 0x6C:
