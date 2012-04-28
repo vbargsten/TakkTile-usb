@@ -50,22 +50,30 @@ void scanRow(uint8_t row){
 
 
 void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
+	// if attiny ACKs
 	if (botherAddress(tinyAddr) == 0){
+		// set TWI to Smart Mode, helpful for the upcoming Read transaction
 		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+		// write 0x04 to MPL115A2 sensor to set start read addy
 		TWIC.MASTER.ADDR = 0xC0;
 		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
 		TWIC.MASTER.DATA = 0x04;
 		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
 		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+		// setup read
 		TWIC.MASTER.ADDR = 0xC1;
 		while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+		// clock in 12 bytes
 		for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
 			dataOut[byteCt] = TWIC.MASTER.DATA;
+			// if byteCt < 11, wait for RIF to trip
 			if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+			// if byteCt == 10, setup read to end w/ NACK and STOP
 			if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 		}
+		// switch from smart mode to quick command mode
 		TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
+		// disable MPL115A2
 		botherAddress(tinyAddr^1);
 	}
 }
