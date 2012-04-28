@@ -1,5 +1,5 @@
+// (C) 2011, 2012 Ian Daniher (Nonolith Labs) <ian@nonolithlabs.com>
 // (C) 2011 Kevin Mehall (Nonolith Labs) <km@kevinmehall.net>
-// (C) 2011 Ian Daniher (Nonolith Labs) <ian@nonolithlabs.com>
 // Licensed under the terms of the GNU GPLv3+
 
 #include "tactar.h"
@@ -48,6 +48,30 @@ void scanRow(uint8_t row){
 	}
 }
 
+
+void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
+	if (botherAddress(tinyAddr) == 0){
+		TWIC.MASTER.CTRLB &= ~TWI_MASTER_QCEN_bm;
+		TWIC.MASTER.ADDR = 0xC0;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+		TWIC.MASTER.DATA = 0x04;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+		TWIC.MASTER.ADDR = 0xC1;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+		TWIC.MASTER.CTRLB |= TWI_MASTER_SMEN_bm;
+		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+		for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
+			dataOut[byteCt] = TWIC.MASTER.DATA;
+			if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+			if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+		}
+		TWIC.MASTER.CTRLB |= TWI_MASTER_QCEN_bm;
+		TWIC.MASTER.CTRLB &= ~TWI_MASTER_SMEN_bm;
+		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	}
+}
+
 void configTWI(void){
 	// quick command mode trips RIF/WIF as soon as the slave ACKs
 	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm; 
@@ -92,7 +116,12 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				scanRow(req->wIndex);
 				USB_ep0_send(0);
 				return true;
-				
+
+			case 0x6C:
+				getCalibrationBytes(req->wIndex, ep0_buf_in);
+				USB_ep0_send(12);
+				return true;
+
 			case 0xE0: // Read EEPROM
 				eeprom_read_block(ep0_buf_in, (void*)(req->wIndex*64), 64);
 				USB_ep0_send(64);
