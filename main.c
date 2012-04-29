@@ -80,6 +80,48 @@ void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
 	}
 }
 
+void getRowData(uint8_t row, uint8_t *dataOut){
+	// enable all MPL115A2s
+	botherAddress(0x1C);
+	TWIC.MASTER.ADDR = 0xC0;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+	TWIC.MASTER.DATA = 0x12;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+	TWIC.MASTER.DATA = 0x01;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	botherAddress(0x1C^1);
+	_delay_ms(1);
+	for (uint8_t column = 0; column < 5; column++) {
+		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+		// attiny address formula
+		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
+		botherAddress(tinyAddr);
+		// if the write address ACKs....
+		if ( botherAddress(0xC0) == 0 ){
+			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+			TWIC.MASTER.ADDR = 0xC0;
+			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+			TWIC.MASTER.DATA = 0x00;
+			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+			TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+			TWIC.MASTER.ADDR = 0xC1;
+			while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+			for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
+				uint8_t index = byteCt + column*4;
+				dataOut[index] = TWIC.MASTER.DATA;
+				if (byteCt < 4) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+				if (byteCt == 3) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+				else TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+			}
+		}
+		TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
+		botherAddress(tinyAddr^1);
+		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+	}
+}
+	
+
 void configTWI(void){
 	// quick command mode trips RIF/WIF as soon as the slave ACKs
 	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm; 
@@ -128,6 +170,11 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			case 0x6C:
 				getCalibrationBytes(req->wIndex, ep0_buf_in);
 				USB_ep0_send(12);
+				return true;
+
+			case 0x7C:
+				getRowData(req->wIndex, ep0_buf_in);
+				USB_ep0_send(64);
 				return true;
 
 			case 0xE0: // Read EEPROM
