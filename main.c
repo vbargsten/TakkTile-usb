@@ -22,14 +22,14 @@ int main(void){
 }
 
 uint8_t botherAddress(uint8_t address, bool stop){
-	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
+	TWIC.MASTER.CTRLB |= TWI_MASTER_QCEN_bm;
 	// set address to bother
 	TWIC.MASTER.ADDR = address;
 	// if address ends in one, wait for a read to finish
 	if (address & 1) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 	// if address ends in zero, wait for a write to finish
 	else while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-	if (stop) TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	if (stop == 1) TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	// return 1 if NACK, 0 if ACK
 	return TWIC.MASTER.STATUS&TWI_MASTER_RXACK_bm;
 }
@@ -74,8 +74,6 @@ void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
 			// if byteCt == 10, setup read to end w/ NACK and STOP
 			if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 		}
-		// switch from smart mode to quick command mode
-		TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
 		// disable MPL115A2
 		botherAddress(tinyAddr^1, 1);
 	}
@@ -84,8 +82,7 @@ void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
 void getRowData(uint8_t row, uint8_t *dataOut){
 	// enable all MPL115A2s
 	botherAddress(0x1C, 1);
-	TWIC.MASTER.ADDR = 0xC0;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+	botherAddress(0xC0, 0);
 	TWIC.MASTER.DATA = 0x12;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
 	TWIC.MASTER.DATA = 0x01;
@@ -99,9 +96,7 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 		// attiny address formula
 		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
 		botherAddress(tinyAddr, 1);
-		TWIC.MASTER.ADDR = 0xC0;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-		if ( (TWIC.MASTER.STATUS&TWI_MASTER_RXACK_bm) == 0 ){
+		if ( botherAddress(0xC0, 0) == 0 ){
 			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 			TWIC.MASTER.DATA = 0x00;
 			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
