@@ -149,7 +149,7 @@ const USB_Descriptor_String_t PROGMEM XmegaExample_ManufacturerString =
  */
 const USB_Descriptor_String_t PROGMEM XmegaExample_ProductString =
 {
-	.Header                 = {.Size = USB_STRING_LEN(8), .Type = DTYPE_String},
+	.Header                 = {.Size = USB_STRING_LEN(6), .Type = DTYPE_String},
 
 	.UnicodeString          = L"TactAr"
 };
