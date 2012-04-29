@@ -66,6 +66,7 @@ void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
 		TWIC.MASTER.ADDR = 0xC1;
 		while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 		// clock in 12 bytes
+		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
 		for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
 			dataOut[byteCt] = TWIC.MASTER.DATA;
 			// if byteCt < 11, wait for RIF to trip
@@ -98,6 +99,7 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
 		botherAddress(tinyAddr);
 		// if the write address ACKs....
+		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
 		if ( botherAddress(0xC0) == 0 ){
 			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 			TWIC.MASTER.ADDR = 0xC0;
@@ -110,9 +112,8 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 			for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
 				uint8_t index = byteCt + column*4;
 				dataOut[index] = TWIC.MASTER.DATA;
-				if (byteCt < 4) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-				if (byteCt == 3) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
-				else TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+				if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+				if (byteCt == 2) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 			}
 		}
 		TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
@@ -174,7 +175,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 
 			case 0x7C:
 				getRowData(req->wIndex, ep0_buf_in);
-				USB_ep0_send(64);
+				USB_ep0_send(20);
 				return true;
 
 			case 0xE0: // Read EEPROM
