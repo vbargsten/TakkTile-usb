@@ -22,6 +22,7 @@ int main(void){
 }
 
 uint8_t botherAddress(uint8_t address){
+	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
 	// set address to bother
 	TWIC.MASTER.ADDR = address;
 	// if address ends in one, wait for a read to finish
@@ -94,16 +95,15 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 	botherAddress(0x1C^1);
 	_delay_ms(1);
 	for (uint8_t column = 0; column < 5; column++) {
+		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
 		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 		// attiny address formula
 		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
 		botherAddress(tinyAddr);
-		// if the write address ACKs....
-		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
-		if ( botherAddress(0xC0) == 0 ){
+		TWIC.MASTER.ADDR = 0xC0;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+		if ( (TWIC.MASTER.STATUS&TWI_MASTER_RXACK_bm) == 0 ){
 			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-			TWIC.MASTER.ADDR = 0xC0;
-			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
 			TWIC.MASTER.DATA = 0x00;
 			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
 			TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
@@ -116,6 +116,7 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 				if (byteCt == 2) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 			}
 		}
+		else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 		TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
 		botherAddress(tinyAddr^1);
 		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
