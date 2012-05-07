@@ -1,5 +1,7 @@
 #! /usr/bin/python
 
+import random
+
 class Tactile:
 	def __init__(self):
 		"""initialize the USB device
@@ -14,7 +16,7 @@ class Tactile:
 	def getDataRaw(self, row):
 		"""return an array of five integers between 0 and 1023, matching the 10b sample depth of the sensors."""
 		# bogus data for testing purposes
-		data = [512, 512, 512, 512, 512]
+		data = [random.randint(0,1023) for i in range(5)]
 		#data = self.doUsbControlTransfer(row)
 		self.rawData[row] = data
 		# return the 1x5 array
@@ -34,3 +36,7 @@ class Tactile:
 	def getCalibrationData(self, row, column):
 		"""return the eight-item-long list of calibration bytes"""
 		return self.calibrationData[row][column]
+
+if __name__ == "__main__":
+	tact = Tactile()
+	print [tact.getRawData(row) for row in range(8)]
