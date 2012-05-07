@@ -1,6 +1,7 @@
 #! /usr/bin/python
 
 import random
+import pprint
 
 class Tactile:
 	def __init__(self):
@@ -39,4 +40,4 @@ class Tactile:
 
 if __name__ == "__main__":
 	tact = Tactile()
-	print [tact.getRawData(row) for row in range(8)]
+	pprint.pprint([tact.getDataRaw(row) for row in range(8)])
