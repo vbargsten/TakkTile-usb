@@ -5,9 +5,9 @@ import usb
 import numpy
 import time
 
-self.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 8)
+#self.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 8)
 
-self.dev.ctrl_transfer(0x40|0x80, 0x6C, 0, 16, 12)
+#self.dev.ctrl_transfer(0x40|0x80, 0x6C, 0, 16, 12)
 
 
 
@@ -23,11 +23,15 @@ class Tactile:
 		# rawData is a set of fixed point numbers
 		self.rawData = 8*[5*[512]]
 
+	def _getTinyAddressFromRowColumn(self, row, column = 0):
+		tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1)
+		return tinyAddr
+
 	def getDataRaw(self, row):
 		"""return an array of five integers between 0 and 1023, matching the 10b sample depth of the sensors."""
 		data = self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, row, 20)
 		data = numpy.resize(data, (5,4))
-		data = [data[1] | data[0] << 2 for datum in data]
+		data = [datum[1] | datum[0] << 2 for datum in data]
 		self.rawData[row] = data
 		# return the 1x5 array
 		return data
@@ -51,4 +55,5 @@ if __name__ == "__main__":
 	import pprint
 	import sys
 	tact = Tactile()
-	pprint.pprint([tact.getDataRaw(row) for row in range(8)])
+	print tact._getTinyAddressFromRowColumn(1)
+	pprint.pprint(tact.getDataRaw(int(sys.argv[1])))
