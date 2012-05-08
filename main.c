@@ -158,9 +158,14 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				
 				return true;
 				
-			case 0x5C:
-				ep0_buf_in[0] = scanRow(req->wIndex);
+			case 0xBA:
+				ep0_buf_in[0] = botherAddress(req->wIndex, req->wValue);
 				USB_ep0_send(1);
+				return true;
+
+			case 0x5C:
+				for (uint8_t row = 0; row++; row < 8) ep0_buf_in[row] = scanRow(row);
+				USB_ep0_send(8);
 				return true;
 
 			case 0x6C:
