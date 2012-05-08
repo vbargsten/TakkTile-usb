@@ -1,11 +1,9 @@
 #! /usr/bin/python
 
-import random
 import usb
 import numpy
 import time
 
-#self.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 8)
 
 #self.dev.ctrl_transfer(0x40|0x80, 0x6C, 0, 16, 12)
 
@@ -52,8 +50,9 @@ class Tactile:
 		return self.calibrationData[row][column]
 
 if __name__ == "__main__":
-	import pprint
 	import sys
 	tact = Tactile()
 	print tact._getTinyAddressFromRowColumn(1)
-	pprint.pprint(tact.getDataRaw(int(sys.argv[1])))
+	print map(bin, tact.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 8))
+	#while True:
+	#	print(tact.getDataRaw(int(sys.argv[1])))
