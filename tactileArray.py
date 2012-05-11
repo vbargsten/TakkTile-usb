@@ -29,8 +29,9 @@ class Tactile:
 		"""return an array of five integers between 0 and 1023, matching the 10b sample depth of the sensors."""
 		data = self.dev.ctrl_transfer(0x40|0x80, 0x8C, 0, row, 20)
 		data = numpy.resize(data, (5,4))
-		temperature = [datum[3] | datum[2] << 2 for datum in data]
-		data = [datum[1] | datum[0] << 2 for datum in data]
+#		print [map(hex, datum[0:2]) for datum in data]
+		temperature = [((datum[3] >> 6| datum[2] << 2)) for datum in data]
+		data = [((datum[1] >> 6| datum[0] << 2)) for datum in data]
 		self.rawData[row] = data
 		# return the 1x5 array
 		return data, temperature
@@ -54,4 +55,4 @@ if __name__ == "__main__":
 	import sys
 	tact = Tactile()
 	while True:
-		print(tact.getDataRaw(int(sys.argv[1])))
+		print tact.getDataRaw(1)
