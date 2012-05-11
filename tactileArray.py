@@ -27,7 +27,7 @@ class Tactile:
 
 	def getDataRaw(self, row):
 		"""return an array of five integers between 0 and 1023, matching the 10b sample depth of the sensors."""
-		data = self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, row, 20)
+		data = self.dev.ctrl_transfer(0x40|0x80, 0x8C, 0, row, 20)
 		data = numpy.resize(data, (5,4))
 		temperature = [datum[3] | datum[2] << 2 for datum in data]
 		data = [datum[1] | datum[0] << 2 for datum in data]
