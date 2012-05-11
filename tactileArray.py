@@ -30,9 +30,10 @@ class Tactile:
 		data = self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, row, 20)
 		data = numpy.resize(data, (5,4))
 		data = [datum[1] | datum[0] << 2 for datum in data]
+		temperature = [datum[3] | datum[2] << 2 for datum in data]
 		self.rawData[row] = data
 		# return the 1x5 array
-		return data
+		return data, temperature
 
 	def getData(self, row):
 		"""return an array of five floating point numbers between 0 and 1, calibrated and temperature compensated"""
@@ -52,7 +53,5 @@ class Tactile:
 if __name__ == "__main__":
 	import sys
 	tact = Tactile()
-	print tact._getTinyAddressFromRowColumn(1)
-	print map(bin, tact.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 8))
-	#while True:
-	#	print(tact.getDataRaw(int(sys.argv[1])))
+	while True:
+		print(tact.getDataRaw(int(sys.argv[1])))
