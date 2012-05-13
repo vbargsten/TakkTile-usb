@@ -10,7 +10,8 @@ class Tactile:
 		"""initialize the USB device
 		load calibration information from USB into Tactile.calibration"""
 		# calibrationData is 8 bytes per sensor
-		self.calibrationData = 8*[5*[8*[0]]]
+		self.calibrationData = 9*[5*[8*[0]]]
+		self.calibrationData[1] = [self.getCalibrationData(1, column) for column in range(5)]
 		# calibratedData is a set of floating point numbers
 		self.calibratedData = 8*[5*[0.5]]
 		# rawData is a set of fixed point numbers
@@ -55,6 +56,8 @@ class Tactile:
 	
 	def getCalibrationData(self, row, column):
 		"""return the eight-item-long list of calibration bytes"""
+		tinyAddr = self._getTinyAddressFromRowColumn(row, column)
+		self.calibrationData[row][column] = self.dev.ctrl_transfer(0x40|0x80, 0x6C, 0, tinyAddr, 12)
 		return self.calibrationData[row][column]
 
 if __name__ == "__main__":
