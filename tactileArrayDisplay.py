@@ -1,26 +1,23 @@
 #! /usr/bin/python
 
-import usb
 import numpy
-import time
-
-from tactileArray import *
 
 #TODO: AT THE MOMENT IT WORKS ONLY WITH ONE ROW !!!
 
 class TactileDisplay:
 	def __init__(self):
-		self.tArray=Tactile()
+		import tactileArray
+		self.tArray = tactileArray.Tactile()
 		self.pressure=[]
 		self.temperature=[]
 		self.calibrationRaw=self.tArray.calibrationData[1]
-		self.calibration=0
+		self.calculateCalibrationCoefficients()
 
 	def calculateCalibrationCoefficients(self):
-		dataLen=len(self.calibrationRaw)
-		self.calibration=numpy.array([6*[0] for i in range(dataLen)])
 		d=self.calibrationRaw
-		for i in range(dataLen):
+		lenCal = len(d)
+		self.calibration=numpy.array([6*[0] for i in range(lenCal)])
+		for i in range(lenCal):
 			# a0
 			self.calibration[i][0]=numpy.array((d[i][0] <<8 | d[i][1]) ,dtype=numpy.int16)
 			# b1
@@ -41,13 +38,9 @@ class TactileDisplay:
 			# self.calibration[i][3]=numpy.array(0x38CC,dtype=numpy.int16)
 
 
-	def update(self):
-		self.pressure,temperature=self.tArray.getDataRaw(1)
-		# sample temperature only once to reduce temperature noise
-		if (len(self.temperature)==0):
-			self.temperature=temperature
-
 	def getCalibratedData(self):
+
+		self.pressure,self.temperature=self.tArray.getDataRaw(1)
 
 		Padc=numpy.array(self.pressure)
 		Padc=numpy.array(Padc << 6,dtype=numpy.int16)
@@ -68,16 +61,12 @@ class TactileDisplay:
 		for i in range(len(Padc)):
 			# a0= 0x41DF = 2107.875
 			a0 = float(self.calibration[i][0])/(8.0)  #2^3
-
 			# b1 = 0xB028 = -2.49512
 			b1 = float(self.calibration[i][1])/(8192.0) #2^13
-
 			# % b2 - 0xBEAD = -1.02069
 			b2 = float(self.calibration[i][2])/(16384.0) #2^14
-
 			# % c12 - 0x38CC = 0.00086665
 			c12 = float(self.calibration[i][4])/(16777216.0) #2^24
-
 
 			c12x2 = c12 * Tadc[i]
 			a1 = b1 + c12x2
@@ -91,17 +80,8 @@ class TactileDisplay:
 #		return 	Pcomp
 		return 	numpy.array(Pcomp,dtype=numpy.int16)
 
-	def show(self):
-		pass
-
-
 
 if __name__ == "__main__":
-	import sys
 	tact = TactileDisplay()
-	tact.calculateCalibrationCoefficients()
 	while True:
-		tact.update()
-		tact.show()
-#		tact.getCalibratedData()
 		print tact.getCalibratedData()
