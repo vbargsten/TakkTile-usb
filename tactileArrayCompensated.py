@@ -8,8 +8,7 @@ class TactileDisplay:
 	def __init__(self):
 		import tactileArray
 		self.tArray = tactileArray.Tactile()
-		self.pressure=[]
-		self.temperature=[]
+		self.pressure,self.temperature=self.tArray.getDataRaw(1)
 		self.calibrationRaw=self.tArray.calibrationData[1]
 		self.calculateCalibrationCoefficients()
 
@@ -40,7 +39,7 @@ class TactileDisplay:
 
 	def getCalibratedData(self):
 
-		self.pressure,self.temperature=self.tArray.getDataRaw(1)
+		self.pressure,temperature=self.tArray.getDataRaw(1)
 
 		Padc=numpy.array(self.pressure)
 		Padc=numpy.array(Padc << 6,dtype=numpy.int16)
