@@ -3,7 +3,7 @@
 // (C) 2011 Kevin Mehall (Nonolith Labs) <km@kevinmehall.net>
 // Licensed under the terms of the GNU GPLv3+
 
-#include "tactar.h"
+#include "takktile.h"
 #include "packetbuffer.h"
 
 #include <avr/eeprom.h>

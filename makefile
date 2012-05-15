@@ -58,7 +58,7 @@
 # To rebuild project do "make clean" then "make all".
 #----------------------------------------------------------------------------
 
-HW_PRODUCT=Nonolith tactar
+HW_PRODUCT=TakkTile
 HW_VERSION=1.0
 FW_VERSION=$(shell git describe --always --dirty='*')
 
