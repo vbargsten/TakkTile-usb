@@ -82,31 +82,45 @@ void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
 void getRowData(uint8_t row, uint8_t *dataOut){
 	// enable all MPL115A2s
 	botherAddress(0x1C, 1);
+	// write address byte of MPL115A2
 	botherAddress(0xC0, 0);
+	// write 1 to 0x12 - start conversion of pressure & temperature
 	TWIC.MASTER.DATA = 0x12;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
 	TWIC.MASTER.DATA = 0x01;
 	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+	// end transaction
 	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	// disable all MPL115A2s
 	botherAddress(0x1C^1, 1);
+	// wait 1ms for conversion to finish
 	_delay_ms(1);
+	// iterate through columns of a given row, enabling the cell, clocking out four bytes of information starting at 0x00
 	for (uint8_t column = 0; column < 5; column++) {
 		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
 		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 		// attiny address formula
 		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
+		// enable cell
 		botherAddress(tinyAddr, 1);
+		// if MPL115A2 ACKs...
 		if ( botherAddress(0xC0, 0) == 0 ){
 			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+			// set start address to 0
 			TWIC.MASTER.DATA = 0x00;
 			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+			// end transaction
 			TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+			// start read from MPL115A2
 			TWIC.MASTER.ADDR = 0xC1;
 			while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+			// clock out four bytes
 			for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
 				uint8_t index = byteCt + column*4;
 				dataOut[index] = TWIC.MASTER.DATA;
+				// if transaction isn't over, wait for ACK
 				if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+				// if transaction is almost over, set next byte to NACK
 				if (byteCt == 2) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 			}
 		}
@@ -126,43 +140,6 @@ void configTWI(void){
 	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
 }
 
-void getRowDataSeq(uint8_t row, uint8_t *dataOut){
-	for (uint8_t column = 0; column < 5; column++) {
-		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
-		// enable all MPL115A2s
-		botherAddress(tinyAddr, 1);
-		botherAddress(0xC0, 0);
-		TWIC.MASTER.DATA = 0x12;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-		TWIC.MASTER.DATA = 0x01;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-		_delay_ms(1);
-		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
-		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-		// attiny address formula
-		botherAddress(tinyAddr, 1);
-		if ( botherAddress(0xC0, 0) == 0 ){
-			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-			TWIC.MASTER.DATA = 0x00;
-			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-			TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-			TWIC.MASTER.ADDR = 0xC1;
-			while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-			for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
-				uint8_t index = byteCt + column*4;
-				dataOut[index] = TWIC.MASTER.DATA;
-				if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-				if (byteCt == 2) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
-			}
-		}
-		else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-		TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
-		botherAddress(tinyAddr^1, 1);
-		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-	}
-}
-	
 /* Configures the board hardware and chip peripherals for the project's functionality. */
 void configHardware(void){
 	USB_ConfigureClock();
@@ -183,6 +160,7 @@ uint8_t cmd_data = 0;
 
 /** Event handler for the library USB Control Request reception event. */
 bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
+	// zero out ep0_buf_in
 	for (uint8_t i = 0; i < 64; i++) ep0_buf_in[i] = 0;
 	usb_cmd = 0;
 	if ((req->bmRequestType & CONTROL_REQTYPE_TYPE) == REQTYPE_VENDOR){
@@ -196,28 +174,23 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				
 				return true;
 				
-			case 0xBA:
+			case 0xBA: // bother a specified I2C address, return '1' if address ACKs, '0' if NACK
 				ep0_buf_in[0] = botherAddress(req->wIndex, req->wValue);
 				USB_ep0_send(1);
 				return true;
 
-			case 0x5C:
+			case 0x5C: // return bitmap of alive rows
 				for (uint8_t row = 0; row < 8; row++) ep0_buf_in[row] = scanRow(row+1);
 				USB_ep0_send(8);
 				return true;
 
-			case 0x6C:
+			case 0x6C: // return the 12 calibration bytes for a specified address
 				getCalibrationBytes(req->wIndex, ep0_buf_in);
 				USB_ep0_send(12);
 				return true;
 
-			case 0x7C:
+			case 0x7C: // return the 20 bytes of pressure and temperature information from a specified row
 				getRowData(req->wIndex, ep0_buf_in);
-				USB_ep0_send(20);
-				return true;
-
-			case 0x8C:
-				getRowDataSeq(req->wIndex, ep0_buf_in);
 				USB_ep0_send(20);
 				return true;
 

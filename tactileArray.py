@@ -32,17 +32,6 @@ class Tactile:
 		# return the 1x5 array
 		return data, temperature
 
-	def getDataRawSeq(self, row):
-		"""return an array of five integers between 0 and 1023, matching the 10b sample depth of the sensors."""
-		data = self.dev.ctrl_transfer(0x40|0x80, 0x8C, 0, row, 20)
-		data = numpy.resize(data, (5,4))
-		#print [map(hex, datum[0:2]) for datum in data]
-		temperature = [((datum[3] >> 6| datum[2] << 2)) for datum in data]
-		data = [((datum[1] >> 6| datum[0] << 2)) for datum in data]
-		self.rawData[row] = data
-		# return the 1x5 array
-		return data, temperature
-
 	def getData(self, row):
 		"""return an array of five floating point numbers between 0 and 1, calibrated and temperature compensated"""
 		# get raw data
@@ -62,9 +51,5 @@ class Tactile:
 
 if __name__ == "__main__":
 	tact = Tactile()
-	shotgun = [ tact.getDataRaw(1)[0] for sample in range(1000) ]
-	shotgun = numpy.rollaxis(numpy.array(shotgun), 1)
-	sequential = [ tact.getDataRawSeq(1)[0] for sample in range(1000) ]
-	sequential = numpy.rollaxis(numpy.array(sequential), 1)
-	print numpy.std(sequential[0]), numpy.std(shotgun[0])
-	print numpy.mean(sequential[0]), numpy.mean(shotgun[0])	
+	while True:
+		print tact.getDataRaw()
