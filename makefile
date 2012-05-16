@@ -453,7 +453,7 @@ ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp $(ASFLAGS)
 all: begin gccversion sizebefore build sizeafter end
 
 # Change the build target to build a HEX file or a library.
-build: elf hex tactar.json
+build: elf hex 
 #eep lss sym
 #build: lib
 
@@ -669,7 +669,6 @@ clean_list :
 	@echo
 	@echo $(MSG_CLEANING)
 	$(REMOVE) $(TARGET).hex
-	$(REMOVE) $(TARGET).json
 	$(REMOVE) $(TARGET).eep
 	$(REMOVE) $(TARGET).cof
 	$(REMOVE) $(TARGET).elf
@@ -712,9 +711,6 @@ bootload_only:
 	sleep 0.5
 	
 bootload: bootload_only update
-
-tactar.json: tactar.hex
-	python make_fwupdate.py tactar.hex "$(FW_VERSION)"
 
 # Listing of phony targets.
 .PHONY : all begin finish end sizebefore sizeafter gccversion \
