@@ -49,13 +49,11 @@ class Tactile:
 				cc["c12"] /= float(1 << 22)
 				cc["c11"] /= float(1 << 21)
 				cc["c22"] /= float(1 << 25)
-		print self.calibrationCoefficients[1]
 
 	def getDataRaw(self, row):
 		"""return an array of five integers between 0 and 1023, matching the 10b sample depth of the sensors."""
 		data = self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, row, 20)
 		data = numpy.resize(data, (5,4))
-		#print [map(hex, datum[0:2]) for datum in data]
 		temperature = [((datum[3] >> 6| datum[2] << 2)) for datum in data]
 		data = [((datum[1] >> 6| datum[0] << 2)) for datum in data]
 		# return the 1x5 array
@@ -74,6 +72,7 @@ class Tactile:
 			# "The 10-bit compensated pressure output for MPL115A, Pcomp, is calculated as follows: 
 			#  Pcomp = a0 + (b1 + c11*Padc + c12*Tadc) * Padc + (b2 + c22*Tadc) * Tadc"
 			Pcomp[column] = cc["a0"] + (cc["b1"] + cc["c11"]*Padc[column] + cc["c12"]*Tadc[column])*Padc[column] + (cc["b2"] + cc["c22"]*Tadc[column])*Tadc[column]
+			Pcomp[column] = 65.0/1023.0*Pcomp[column]+50
 		return Pcomp 
 	
 	def getCalibrationData(self, row, column):
