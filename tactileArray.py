@@ -7,6 +7,12 @@ import usb
 import numpy
 import time
 
+def unTwos(x, bitlen):
+	# basic function to undo Two's Complement signing
+	if( (x&(1<<(bitlen-1))) != 0 ):
+		x = x - (1<<bitlen)
+	return x
+
 class Tactile:
 	def __init__(self):
 		# search for a USB device with the proper VID/PID combo
@@ -27,11 +33,6 @@ class Tactile:
 
 	def getCalibrationCoefficients(self):
 		""" This function implements the compensation & calibration coefficient calculations from page 15 of AN3785. """
-		def unTwos(x, bitlen):
-			# basic function to undo Two's Complement signing
-			if( (x&(1<<(bitlen-1))) != 0 ):
-				x = x - (1<<bitlen)
-			return x
 		# iterate through rows and columns
 		for row in [1]:
 			for column in range(5):
@@ -62,8 +63,8 @@ class Tactile:
 		data = numpy.resize(data, (5,4))
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
-		temperature = [((datum[3] >> 6| datum[2] << 2)) for datum in data]
-		data = [((datum[1] >> 6| datum[0] << 2)) for datum in data]
+		temperature = [unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data]
+		data = [unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data]
 		return data, temperature
 
 	def getData(self, row):
