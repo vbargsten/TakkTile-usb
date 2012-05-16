@@ -10,10 +10,10 @@ import time
 class Tactile:
 	def __init__(self):
 		# search for a USB device with the proper VID/PID combo
-		try:
-			self.dev = usb.core.find(idVendor=0x59e3, idProduct=0x74C7)
-		except:
-			raise("Can't find TakkTile USB interface!")
+		self.dev = usb.core.find(idVendor=0x59e3, idProduct=0x74C7)
+		if self.dev == None:
+			print("Can't find TakkTile USB interface!")
+			quit()
 		# initalize list of list of dictionaries containing the polynomial coefficients for each sensor 
 		self.calibrationCoefficients = 9*[5*[{"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}]]
 		# retrieve calibration bytes and calculate the polynomial's coefficients
