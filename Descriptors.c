@@ -138,9 +138,9 @@ const USB_Descriptor_String_t PROGMEM XmegaExample_LanguageString =
  */
 const USB_Descriptor_String_t PROGMEM XmegaExample_ManufacturerString =
 {
-	.Header                 = {.Size = USB_STRING_LEN(13), .Type = DTYPE_String},
+	.Header                 = {.Size = USB_STRING_LEN(38), .Type = DTYPE_String},
 
-	.UnicodeString          = L"Nonolith Labs"
+	.UnicodeString          = L"The Biorobotics Lab and Nonolith Labs"
 };
 
 /** Product descriptor string. This is a Unicode string containing the product's details in human readable form,
@@ -149,9 +149,9 @@ const USB_Descriptor_String_t PROGMEM XmegaExample_ManufacturerString =
  */
 const USB_Descriptor_String_t PROGMEM XmegaExample_ProductString =
 {
-	.Header                 = {.Size = USB_STRING_LEN(6), .Type = DTYPE_String},
+	.Header                 = {.Size = USB_STRING_LEN(8), .Type = DTYPE_String},
 
-	.UnicodeString          = L"TactAr"
+	.UnicodeString          = L"TakkTile"
 };
 
 
