@@ -9,31 +9,35 @@ import time
 
 class Tactile:
 	def __init__(self):
-		self.dev = usb.core.find(idVendor=0x59e3, idProduct=0x74C7)
-		"""initialize the USB device
-		load calibration information from USB into Tactile.calibration"""
-		# calibrationData is 12 bytes per sensor
-		self.calibrationData = 9*[5*[12*[0]]]
-		# those eight bytes contain six coefficients
+		# search for a USB device with the proper VID/PID combo
+		try:
+			self.dev = usb.core.find(idVendor=0x59e3, idProduct=0x74C7)
+		except:
+			raise("Can't find TakkTile USB interface!")
+		# initalize list of list of dictionaries containing the polynomial coefficients for each sensor 
 		self.calibrationCoefficients = 9*[5*[{"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}]]
-		# get the calibration bytes for all the sensors in row1
-		self.calibrationData[1] = [self.getCalibrationData(1, column) for column in range(5)]
-		# calculate the coefficients
-		self.calculateCalibrationCoefficients()
+		# retrieve calibration bytes and calculate the polynomial's coefficients
+		self.getCalibrationCoefficients()
 
 	
 	def _getTinyAddressFromRowColumn(self, row, column = 0):
+		# implement the bitmath used to calculate the I2C address of an attiny
 		tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1)
 		return tinyAddr
 
-	def calculateCalibrationCoefficients(self):
+	def getCalibrationCoefficients(self):
+		""" This function implements the compensation & calibration coefficient calculations from page 15 of AN3785. """
 		def unTwos(x, bitlen):
+			# basic function to undo Two's Complement signing
 			if( (x&(1<<(bitlen-1))) != 0 ):
 				x = x - (1<<bitlen)
 			return x
+		# iterate through rows and columns
 		for row in [1]:
 			for column in range(5):
-				cd = self.calibrationData[row][column] 
+				# get calibration data from a specified location
+				cd = self.getCalibrationData(row, column)  
+				# define short alias to save me keystrokes & enhance readability
 				cc = self.calibrationCoefficients[row][column]
 				# undo Two's complement if applicable, pack into proper bit width
 				cc["a0"] = unTwos(((cd[0] << 8) | cd[1]), 16)
@@ -51,20 +55,24 @@ class Tactile:
 				cc["c22"] /= float(1 << 25)
 
 	def getDataRaw(self, row):
-		"""return an array of five integers between 0 and 1023, matching the 10b sample depth of the sensors."""
+		"""Query the TakkTile USB interface for the pressure and temperature samples from a specified row of sensors.."""
+		# 0x7C is "get data" vendor request, takes a row as a wValue, returns 20 bytes
 		data = self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, row, 20)
+		# use numpy.resize to shape the 20 bytes into five chunks of four bytes each
 		data = numpy.resize(data, (5,4))
+		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
+		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
 		temperature = [((datum[3] >> 6| datum[2] << 2)) for datum in data]
 		data = [((datum[1] >> 6| datum[0] << 2)) for datum in data]
-		# return the 1x5 array
 		return data, temperature
 
 	def getData(self, row):
-		"""return an array of five floating point numbers between 0 and 1, calibrated and temperature compensated"""
-		# get raw data
+		"""Return measured pressure in kPa, temperature compensated and factory calibrated."""
+		# get raw 10b data
 		Padc, Tadc = self.getDataRaw(row)
+		# initialize array for compensated pressure readings
 		Pcomp = len(Padc)*[0]
-		# for element in the returned pressure data
+		# for element in the returned pressure data...
 		for column in range(len(Padc)):
 			# load the calibration coefficients calculated when Tactile is initialized
 			cc = self.calibrationCoefficients[row][column]
@@ -72,14 +80,16 @@ class Tactile:
 			# "The 10-bit compensated pressure output for MPL115A, Pcomp, is calculated as follows: 
 			#  Pcomp = a0 + (b1 + c11*Padc + c12*Tadc) * Padc + (b2 + c22*Tadc) * Tadc"
 			Pcomp[column] = cc["a0"] + (cc["b1"] + cc["c11"]*Padc[column] + cc["c12"]*Tadc[column])*Padc[column] + (cc["b2"] + cc["c22"]*Tadc[column])*Tadc[column]
+			# convert from 10b number to kPa
 			Pcomp[column] = 65.0/1023.0*Pcomp[column]+50
 		return Pcomp 
 	
 	def getCalibrationData(self, row, column):
-		"""return the 12-item-long list of calibration bytes"""
+		"""Request the 12 calibration bytes from a sensor at a specified row and column."""
+		# get the attiny's virtual address for the specified row/column
 		tinyAddr = self._getTinyAddressFromRowColumn(row, column)
-		self.calibrationData[row][column] = self.dev.ctrl_transfer(0x40|0x80, 0x6C, 0, tinyAddr, 12)
-		return self.calibrationData[row][column]
+		# read the calibration data via vendor request and return it 
+		return self.dev.ctrl_transfer(0x40|0x80, 0x6C, 0, tinyAddr, 12)	
 
 if __name__ == "__main__":
 	tact = Tactile()
