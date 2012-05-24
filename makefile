@@ -100,7 +100,7 @@ FORMAT = ihex
 
 
 # Target file name (without extension).
-TARGET = tactar
+TARGET = TakkTile
 
 
 # Object files directory

@@ -13,7 +13,7 @@ def unTwos(x, bitlen):
 		x = x - (1<<bitlen)
 	return x
 
-class Tactile:
+class TakkTile:
 	def __init__(self):
 		# search for a USB device with the proper VID/PID combo
 		self.dev = usb.core.find(idVendor=0x59e3, idProduct=0x74C7)
@@ -75,7 +75,7 @@ class Tactile:
 		Pcomp = len(Padc)*[0]
 		# for element in the returned pressure data...
 		for column in range(len(Padc)):
-			# load the calibration coefficients calculated when Tactile is initialized
+			# load the calibration coefficients calculated when the TakkTile class is initialized
 			cc = self.calibrationCoefficients[row][column]
 			# apply the formula contained on page 13 of Freescale's AN3785
 			# "The 10-bit compensated pressure output for MPL115A, Pcomp, is calculated as follows: 
@@ -93,5 +93,5 @@ class Tactile:
 		return self.dev.ctrl_transfer(0x40|0x80, 0x6C, 0, tinyAddr, 12)	
 
 if __name__ == "__main__":
-	tact = Tactile()
+	tact = TakkTile()
 	print tact.getData(1)
