@@ -1,3 +1,6 @@
 [submodule "usb"]
 	path = usb
 	url = git://github.com/nonolith/USB-XMEGA.git
+[submodule "PyUSB"]
+	path = PyUSB
+	url = https://github.com/walac/pyusb.git
