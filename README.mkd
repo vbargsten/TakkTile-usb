@@ -1,0 +1,20 @@
+### Setup
+
+This "HowTo" assumes you're running a modern version of the Ubuntu Linux distribution. Ubuntu has a low barrier to entry and provides a rock-solid development environment.
+
+* Get the AVR compiler toolchain.
+
+	sudo apt-get install gcc-avr avr-libc gcc-avr binutils-avr avr-libc avrdude git
+
+* Get the code.
+
+	git clone --recursive git://github.com/TakkTile/TakkTile-usb.git
+
+* Install the PyUSB-1.0 Python module.
+
+	cd TakkTile-usb/PyUSB; sudo python setup.py install
+
+* With an [AVRISP-mkII](http://www.digikey.com/product-search/en/programmers-development-systems/in-circuit-programmers-emulators-and-debuggers/2621880?k=avrisp) programmer attached to the XMEGA on the board, install the bootloader and upload the firmware.
+
+	cd ../;sudo make bootload
+
