@@ -63,17 +63,19 @@ void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
 		TWIC.MASTER.DATA = 0x04;
 		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
 		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-		// setup read
-		TWIC.MASTER.ADDR = 0xC1;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-		// clock in 12 bytes
-		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
-		for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
-			dataOut[byteCt] = TWIC.MASTER.DATA;
-			// if byteCt < 11, wait for RIF to trip
-			if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-			// if byteCt == 10, setup read to end w/ NACK and STOP
-			if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+		if ( botherAddress(0xC0, 1) == 0 ){
+			// setup read
+			TWIC.MASTER.ADDR = 0xC1;
+			while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+			// clock in 12 bytes
+			TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+			for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
+				dataOut[byteCt] = TWIC.MASTER.DATA;
+				// if byteCt < 11, wait for RIF to trip
+				if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+				// if byteCt == 10, setup read to end w/ NACK and STOP
+				if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+			}
 		}
 		// disable MPL115A2
 		botherAddress(tinyAddr^1, 1);
