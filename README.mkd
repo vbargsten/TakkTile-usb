@@ -5,7 +5,9 @@ This "HowTo" assumes you're running a modern version of the Ubuntu Linux distrib
 * Get the AVR compiler toolchain.
 
  > sudo add-apt-repository ppa:nonolith/devtools
+
  > sudo apt-get update
+
  > sudo apt-get install gcc-avr avr-libc gcc-avr binutils-avr avr-libc avrdude git
 
 * Get the code.
