@@ -20,6 +20,7 @@ class TakkTile:
 		if self.dev == None:
 			print("Can't find TakkTile USB interface!")
 			quit()
+		print(map(bin, self.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 8)))
 		# initalize list of list of dictionaries containing the polynomial coefficients for each sensor 
 		self.calibrationCoefficients = 9*[5*[{"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}]]
 		# retrieve calibration bytes and calculate the polynomial's coefficients
