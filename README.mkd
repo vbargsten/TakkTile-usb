@@ -2,7 +2,7 @@
 
 This "HowTo" assumes you're running a modern version of the Ubuntu Linux distribution. Ubuntu has a low barrier to entry and provides a rock-solid development environment.
 
-* Get the AVR compiler toolchain.
+* Get the AVR compiler toolchain. Note, avr-libc v1.7 is broken. Please follow the directions below to get avr-libc v1.8 from the Nonolith Labs PPA or get it from [upstream](http://download.savannah.gnu.org/releases/avr-libc/).
 
  > sudo add-apt-repository ppa:nonolith/devtools
 
