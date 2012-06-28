@@ -5,7 +5,7 @@
 
 import usb
 import numpy
-import time
+import re
 
 def unTwos(x, bitlen):
 	# basic function to undo Two's Complement signing
@@ -20,12 +20,18 @@ class TakkTile:
 		if self.dev == None:
 			print("Can't find TakkTile USB interface!")
 			quit()
-		print(map(bin, self.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 8)))
+		self.getAlive()
 		# initalize list of list of dictionaries containing the polynomial coefficients for each sensor 
 		self.calibrationCoefficients = 9*[5*[{"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}]]
 		# retrieve calibration bytes and calculate the polynomial's coefficients
 		self.getCalibrationCoefficients()
 
+	def getAlive(self):
+		""" Return an array containing the cell number of all alive cells. """
+		pad = lambda x: bin(x)[2::].zfill(5)[::-1]
+		bitmap = self.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 8)
+		bitmap = ''.join(map(pad, bitmap))
+		return [match.span()[0] for match in re.finditer('1', bitmap)] 
 	
 	def _getTinyAddressFromRowColumn(self, row, column = 0):
 		# implement the bitmath used to calculate the I2C address of an attiny
@@ -84,6 +90,8 @@ class TakkTile:
 			Pcomp[column] = cc["a0"] + (cc["b1"] + cc["c11"]*Padc[column] + cc["c12"]*Tadc[column])*Padc[column] + (cc["b2"] + cc["c22"]*Tadc[column])*Tadc[column]
 			# convert from 10b number to kPa
 			Pcomp[column] = 65.0/1023.0*Pcomp[column]+50
+			# round to keep sane sigfig count
+			Pcomp[column] = round(Pcomp[column], 4)
 		return Pcomp 
 	
 	def getCalibrationData(self, row, column):
@@ -95,4 +103,9 @@ class TakkTile:
 
 if __name__ == "__main__":
 	tact = TakkTile()
-	print tact.getData(1)
+	import time
+	while True:
+		start = time.time()
+		data = tact.getData(1)
+		end = time.time()
+		print round(end-start, 6), data
