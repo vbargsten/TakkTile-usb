@@ -9,7 +9,7 @@ USB_FLAGS =  -DF_USB=$(F_USB) -D USB_MAXEP=2 -D USB_EP0SIZE=64
 
 COMPILE = avr-gcc -Wall -O3 -DF_CPU=$(F_CPU) $(CFLAGS) -mmcu=$(DEVICE) $(USB_FLAGS)
 
-hex: main.hex
+hex: .hex
 
 .c.o:
 	$(COMPILE) -c $< -o $@
@@ -17,10 +17,10 @@ hex: main.hex
 clean:
 	rm -f */*.o *.o *.hex *.elf
 
-main.elf: $(OBJECTS)
+.elf: $(OBJECTS)
 	$(COMPILE) -o main.elf $(OBJECTS)
 
-main.hex: main.elf
+.hex: .elf
 	rm -f main.hex
 	avr-objcopy -j .text -j .data -O ihex main.elf main.hex
 	avr-size main.hex
@@ -35,7 +35,7 @@ c:
 update: main.hex
 	python update.py main.hex
 
-HW_PRODUCT=Nonolith CEE
+HW_PRODUCT=TakkTile
 HW_VERSION=1.0
 FW_VERSION=$(shell git describe --always --dirty='*')
 
@@ -43,5 +43,5 @@ bootload_only:
 	make -Cusb/bootloader HW_PRODUCT="$(HW_PRODUCT)" HW_VERSION="$(HW_VERSION)" program
 	sleep 0.5
 
-cee.json: cee.hex
-	python make_fwupdate.py cee.hex "$(FW_VERSION)"
+.json: .hex
+	python make_fwupdate.py .hex "$(FW_VERSION)"
