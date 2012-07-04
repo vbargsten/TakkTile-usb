@@ -3,7 +3,7 @@ F_CPU   = 32000000UL
 F_USB	= 48000000UL
 CFLAGS  =  -g -I. -Iusb/ -include usb/io.h -std=c99
 
-OBJECTS = Descriptors.o  main.o  packetbuffer.o usb/usb_requests.o  usb/usb_xmega.o
+OBJECTS = Descriptors.o  main.o  usb/usb_requests.o  usb/usb_xmega.o
 
 USB_FLAGS =  -DF_USB=$(F_USB) -D USB_MAXEP=2 -D USB_EP0SIZE=64
 

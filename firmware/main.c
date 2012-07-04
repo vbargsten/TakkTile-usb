@@ -4,7 +4,6 @@
 // Licensed under the terms of the GNU GPLv3+
 
 #include "takktile.h"
-#include "packetbuffer.h"
 
 #include <avr/eeprom.h>
 
@@ -13,7 +12,6 @@
 
 int main(void){
 	configHardware();
-	packetbuf_endpoint_init();
 	
 	PMIC.CTRL = PMIC_LOLVLEN_bm;
 	sei();	
