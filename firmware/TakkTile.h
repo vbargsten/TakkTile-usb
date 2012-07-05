@@ -8,7 +8,7 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "Descriptors.h"
-#include "usb.h"
+#include "usb/usb.h"
 
 typedef struct IN_packet{
 } __attribute__((packed)) IN_packet;

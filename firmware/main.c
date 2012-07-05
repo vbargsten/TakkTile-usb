@@ -207,14 +207,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				return true; // Wait for OUT data (expecting an OUT transfer)
 				
 			case 0xBB: // disconnect from USB, jump to bootloader
-				cli();
-				PMIC.CTRL = 0;
-				USB_ep0_send(0);
-				USB_ep0_wait_for_complete();
-				_delay_us(10000);
-				USB_Detach();
-				void (*enter_bootloader)(void) = (void *) 0x47fc /*0x8ff8/2*/;
-				enter_bootloader();
+				USB_enter_bootloader();
 				return true;
 		}
 	}

@@ -1,13 +1,13 @@
 DEVICE  = atxmega32a4
 F_CPU   = 32000000UL
 F_USB	= 48000000UL
-CFLAGS  =  -g -I. -Iusb/ -include usb/io.h -std=c99
+CFLAGS  =  -g -I. -Iusb/ -std=gnu99
 
 OBJECTS = Descriptors.o  main.o  usb/usb_requests.o  usb/usb_xmega.o
 
 USB_FLAGS =  -DF_USB=$(F_USB) -D USB_MAXEP=2 -D USB_EP0SIZE=64
 
-COMPILE = avr-gcc -Wall -O3 -DF_CPU=$(F_CPU) $(CFLAGS) -mmcu=$(DEVICE) $(USB_FLAGS)
+COMPILE = avr-gcc -Wall -O3 -DF_CPU=$(F_CPU) $(CFLAGS) -mmcu=$(DEVICE) -D __AVR_ATxmega32A4U__ $(USB_FLAGS)
 
 hex: .hex
 
