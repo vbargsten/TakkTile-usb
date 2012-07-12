@@ -12,4 +12,6 @@ uint8_t bitmap[8];
 
 // function prototypes
 void configHardware(void);
+void startConversion(uint8_t row);
+void getRowData(uint8_t row, uint8_t *dataOut);
 bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req);
