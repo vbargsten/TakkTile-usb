@@ -103,9 +103,7 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 		// attiny address formula
 		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
 		// enable cell
-		botherAddress(tinyAddr, 1);
-		// if MPL115A2 ACKs...
-		if ( botherAddress(0xC0, 0) == 0 ){
+		if ( (bitmap[row]&(1<<row)) == (1<<row) ){
 			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 			// set start address to 0
 			TWIC.MASTER.DATA = 0x00;
