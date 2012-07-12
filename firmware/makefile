@@ -9,7 +9,7 @@ USB_FLAGS =  -DF_USB=$(F_USB) -D USB_MAXEP=2 -D USB_EP0SIZE=64
 
 COMPILE = avr-gcc -Wall -O3 -DF_CPU=$(F_CPU) $(CFLAGS) -mmcu=$(DEVICE) -D __AVR_ATxmega32A4U__ $(USB_FLAGS)
 
-hex: .hex
+hex: main.hex
 
 .c.o:
 	$(COMPILE) -c $< -o $@
@@ -20,7 +20,7 @@ clean:
 .elf: $(OBJECTS)
 	$(COMPILE) -o main.elf $(OBJECTS)
 
-.hex: .elf
+main.hex: .elf
 	rm -f main.hex
 	avr-objcopy -j .text -j .data -O ihex main.elf main.hex
 	avr-size main.hex

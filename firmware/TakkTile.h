@@ -2,7 +2,7 @@
 #define F_CPU 32000000UL
 
 // includes
-#include <avr/io.h>
+#include "usb/avr/io.h"
 #include <avr/wdt.h>
 #include <avr/power.h>
 #include <avr/interrupt.h>
