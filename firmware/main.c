@@ -3,7 +3,7 @@
 // (C) 2011 Kevin Mehall (Nonolith Labs) <km@kevinmehall.net>
 // Licensed under the terms of the GNU GPLv3+
 
-#include "takktile.h"
+#include "TakkTile.h"
 
 #include <avr/eeprom.h>
 
@@ -131,7 +131,13 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 	}
 }
-	
+
+void getAlive(uint8_t *dataOut){
+	for (uint8_t row = 0; row < 8; row++) {
+		bitmap[row] = scanRow(row+1);
+		dataOut[row] = bitmap[row];
+	}
+}
 
 void configTWI(void){
 	// quick command mode trips RIF/WIF as soon as the slave ACKs
@@ -181,7 +187,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				return true;
 
 			case 0x5C: // return bitmap of alive rows
-				for (uint8_t row = 0; row < 8; row++) ep0_buf_in[row] = scanRow(row+1);
+				getAlive(ep0_buf_in);	
 				USB_ep0_send(8);
 				return true;
 

@@ -3,18 +3,12 @@
 
 // includes
 #include "usb/avr/io.h"
-#include <avr/wdt.h>
-#include <avr/power.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include "Descriptors.h"
 #include "usb/usb.h"
 
-typedef struct IN_packet{
-} __attribute__((packed)) IN_packet;
-
-typedef struct OUT_packet{
-} __attribute__((packed)) OUT_packet;
+uint8_t bitmap[8];
 
 // function prototypes
 void configHardware(void);
