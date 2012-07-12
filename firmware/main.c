@@ -80,7 +80,7 @@ void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
 	}
 }
 
-void getRowData(uint8_t row, uint8_t *dataOut){
+void startConversion(uint8_t row){
 	// enable all MPL115A2s
 	botherAddress(0x1C, 1);
 	// write address byte of MPL115A2
@@ -94,8 +94,9 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	// disable all MPL115A2s
 	botherAddress(0x1C^1, 1);
-	// wait 1ms for conversion to finish
-	_delay_ms(1);
+}
+
+void getRowData(uint8_t row, uint8_t *dataOut){
 	// iterate through columns of a given row, enabling the cell, clocking out four bytes of information starting at 0x00
 	for (uint8_t column = 0; column < 5; column++) {
 		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
@@ -103,7 +104,10 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 		// attiny address formula
 		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
 		// enable cell
-		if ( (bitmap[row]&(1<<row)) == (1<<row) ){
+		botherAddress(tinyAddr, 1);
+		// if MPL115A2 ACKs...
+		//if ( botherAddress(0xC0, 0) == 0 ){
+		if ( (bitmap[row]&(1<<row)) == (1<<row) ){	if ( (bitmap[row]&(1<<row)) == (1<<row) ){
 			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 			// set start address to 0
 			TWIC.MASTER.DATA = 0x00;
@@ -195,6 +199,8 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				return true;
 
 			case 0x7C: // return the 20 bytes of pressure and temperature information from a specified row
+				startConversion(req->wIndex);
+				_delay_ms(1);
 				getRowData(req->wIndex, ep0_buf_in);
 				USB_ep0_send(20);
 				return true;
