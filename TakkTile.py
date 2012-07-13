@@ -61,6 +61,7 @@ class TakkTile:
 				cc["c12"] /= float(1 << 22)
 				cc["c11"] /= float(1 << 21)
 				cc["c22"] /= float(1 << 25)
+				print cd 
 
 	def getDataRaw(self, row):
 		"""Query the TakkTile USB interface for the pressure and temperature samples from a specified row of sensors.."""
@@ -78,6 +79,7 @@ class TakkTile:
 		"""Return measured pressure in kPa, temperature compensated and factory calibrated."""
 		# get raw 10b data
 		Padc, Tadc = self.getDataRaw(row)
+		print Padc, Tadc
 		# initialize array for compensated pressure readings
 		Pcomp = len(Padc)*[0]
 		# for element in the returned pressure data...
@@ -103,9 +105,9 @@ class TakkTile:
 
 if __name__ == "__main__":
 	tact = TakkTile()
+	print tact.getAlive() 
 	import time
-	while True:
-		start = time.time()
-		data = tact.getData(1)
-		end = time.time()
-		print round(end-start, 6), data
+	start = time.time()
+	data = tact.getData(1)
+	end = time.time()
+	print round(end-start, 6), data
