@@ -11,8 +11,14 @@
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
 int main(void){
-	configHardware();
-	
+	USB_ConfigureClock();
+	PORTR.DIRSET = 1 << 1;
+	PORTR.OUTSET = 1 << 1;
+	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm; 
+	TWIC.MASTER.BAUD = TWI_BAUD;
+	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
+	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
+	USB_Init();
 	PMIC.CTRL = PMIC_LOLVLEN_bm;
 	sei();	
 	for (;;){
@@ -78,7 +84,7 @@ void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
 	}
 }
 
-void startConversion(uint8_t row){
+inline void startConversion(uint8_t row){
 	// enable all MPL115A2s
 	botherAddress(0x1C, 1);
 	// write address byte of MPL115A2
@@ -139,22 +145,7 @@ void getAlive(uint8_t *dataOut){
 	}
 }
 
-void configTWI(void){
-	// quick command mode trips RIF/WIF as soon as the slave ACKs
-	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm; 
-	TWIC.MASTER.BAUD = TWI_BAUD;
-	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
-	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
-}
 
-/* Configures the board hardware and chip peripherals for the project's functionality. */
-void configHardware(void){
-	USB_ConfigureClock();
-	configTWI();
-	PORTR.DIRSET = 1 << 1;
-	PORTR.OUTSET = 1 << 1;
-	USB_Init();
-}
 
 #define xstringify(s) stringify(s)
 #define stringify(s) #s
