@@ -61,7 +61,6 @@ class TakkTile:
 				cc["c12"] /= float(1 << 22)
 				cc["c11"] /= float(1 << 21)
 				cc["c22"] /= float(1 << 25)
-				print cd 
 
 	def getDataRaw(self, row):
 		"""Query the TakkTile USB interface for the pressure and temperature samples from a specified row of sensors.."""
@@ -99,13 +98,12 @@ class TakkTile:
 	def getCalibrationData(self, row, column):
 		"""Request the 12 calibration bytes from a sensor at a specified row and column."""
 		# get the attiny's virtual address for the specified row/column
-		tinyAddr = self._getTinyAddressFromRowColumn(row, column)
 		# read the calibration data via vendor request and return it 
-		return self.dev.ctrl_transfer(0x40|0x80, 0x6C, 0, tinyAddr, 12)	
+		return self.dev.ctrl_transfer(0x40|0x80, 0x6C, column, row, 12)	
 
 if __name__ == "__main__":
 	tact = TakkTile()
-	print tact.getAlive() 
+	#print tact.getAlive() 
 	import time
 	start = time.time()
 	data = tact.getData(1)

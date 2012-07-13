@@ -56,34 +56,6 @@ uint8_t scanRow(uint8_t row){
 }
 
 
-void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
-	// if attiny ACKs
-	if (botherAddress(tinyAddr, 1) == 0){
-		// set TWI to Smart Mode, helpful for the upcoming Read transaction
-		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-		// write 0x04 to MPL115A2 sensor to set start read addy
-		if ( botherAddress(0xC0, 0) == 0 ){
-			TWIC.MASTER.DATA = 0x04;
-			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-			TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-			// setup read
-			TWIC.MASTER.ADDR = 0xC1;
-			while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-			// clock in 12 bytes
-			TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
-			for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
-				dataOut[byteCt] = TWIC.MASTER.DATA;
-				// if byteCt < 11, wait for RIF to trip
-				if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-				// if byteCt == 10, setup read to end w/ NACK and STOP
-				if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
-			}
-		}
-		// disable MPL115A2
-		botherAddress(tinyAddr^1, 1);
-	}
-}
-
 inline void startConversion(uint8_t row){
 	// enable all MPL115A2s
 	botherAddress(0x1C, 1);
@@ -98,6 +70,41 @@ inline void startConversion(uint8_t row){
 	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	// disable all MPL115A2s
 	botherAddress(0x1C^1, 1);
+}
+
+void getCalData(uint8_t row, uint8_t column, uint8_t *dataOut){
+	// iterate through columns of a given row, enabling the cell, clocking out four bytes of information starting at 0x00
+	TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+	// attiny address formula
+	uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
+	// enable cell
+	botherAddress(tinyAddr, 1);
+	// if MPL115A2 ACKs...
+	if ( (bitmap[row-1]&(1<<column)) == (1<<column) ){
+		botherAddress(0xC0, 0);
+		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
+		// set start address to 0
+		TWIC.MASTER.DATA = 0x04;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+		// end transaction
+		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+		// start read from MPL115A2
+		TWIC.MASTER.ADDR = 0xC1;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+		// clock out four bytes
+		for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
+			dataOut[byteCt] = TWIC.MASTER.DATA;
+			// if transaction isn't over, wait for ACK
+			if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+			// if transaction is almost over, set next byte to NACK
+			if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+		}
+	}
+	else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
+	botherAddress(tinyAddr^1, 1);
+	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 }
 
 void getRowData(uint8_t row, uint8_t *dataOut){
@@ -183,7 +190,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				return true;
 
 			case 0x6C: // return the 12 calibration bytes for a specified address
-				getCalibrationBytes(req->wIndex, ep0_buf_in);
+				getCalData(req->wIndex, req->wValue, ep0_buf_in);
 				USB_ep0_send(12);
 				return true;
 
