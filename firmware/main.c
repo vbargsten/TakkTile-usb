@@ -56,12 +56,10 @@ void getCalibrationBytes(uint8_t tinyAddr, uint8_t *dataOut){
 		// set TWI to Smart Mode, helpful for the upcoming Read transaction
 		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 		// write 0x04 to MPL115A2 sensor to set start read addy
-		TWIC.MASTER.ADDR = 0xC0;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-		TWIC.MASTER.DATA = 0x04;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-		if ( botherAddress(0xC0, 1) == 0 ){
+		if ( botherAddress(0xC0, 0) == 0 ){
+			TWIC.MASTER.DATA = 0x04;
+			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+			TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 			// setup read
 			TWIC.MASTER.ADDR = 0xC1;
 			while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
@@ -106,9 +104,9 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 		// enable cell
 		botherAddress(tinyAddr, 1);
 		// if MPL115A2 ACKs...
-		//if ( botherAddress(0xC0, 0) == 0 ){
-		if ( (bitmap[row]&(1<<row)) == (1<<row) ){	if ( (bitmap[row]&(1<<row)) == (1<<row) ){
-			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+		if ( (bitmap[row-1]&(1<<column)) == (1<<column) ){
+			botherAddress(0xC0, 0);
+			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
 			// set start address to 0
 			TWIC.MASTER.DATA = 0x00;
 			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
