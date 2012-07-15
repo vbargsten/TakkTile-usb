@@ -1,4 +1,4 @@
-// (C) 2012 Biorobotics Lab and Nonolith Labs                                                                                                                                                    
+// (C) 2012 Biorobotics Lab and Nonolith Labs
 // (C) 2011, 2012 Ian Daniher (Nonolith Labs) <ian@nonolithlabs.com>
 // (C) 2011 Kevin Mehall (Nonolith Labs) <km@kevinmehall.net>
 // Licensed under the terms of the GNU GPLv3+
