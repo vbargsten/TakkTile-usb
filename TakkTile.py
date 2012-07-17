@@ -111,7 +111,8 @@ if __name__ == "__main__":
 	tact = TakkTile()
 	#print tact.getAlive() 
 	import time
-	start = time.time()
-	data = tact.getData(1)
-	end = time.time()
-	print round(end-start, 6), data
+	while True:
+		start = time.time()
+		data = tact.getData(1)
+		end = time.time()
+		print round(end-start, 6), data
