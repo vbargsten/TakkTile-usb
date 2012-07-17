@@ -22,7 +22,7 @@ class TakkTile:
 			quit()
 		self.getAlive()
 		# initalize list of list of dictionaries containing the polynomial coefficients for each sensor 
-		self.calibrationCoefficients = 9*[5*[{"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}]]
+		self.calibrationCoefficients = 9*[5*[0]]
 		# retrieve calibration bytes and calculate the polynomial's coefficients
 		self.getCalibrationCoefficients()
 
@@ -46,7 +46,7 @@ class TakkTile:
 				# get calibration data from a specified location
 				cd = self.getCalibrationData(row, column)  
 				# define short alias to save me keystrokes & enhance readability
-				cc = self.calibrationCoefficients[row][column]
+				cc = {"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}
 				# undo Two's complement if applicable, pack into proper bit width
 				cc["a0"] = unTwos(((cd[0] << 8) | cd[1]), 16)
 				cc["b1"] = unTwos(((cd[2] << 8) | cd[3]), 16)
@@ -61,6 +61,7 @@ class TakkTile:
 				cc["c12"] /= float(1 << 22)
 				cc["c11"] /= float(1 << 21)
 				cc["c22"] /= float(1 << 25)
+				self.calibrationCoefficients[row][column] = cc
 
 	def getDataRaw(self, row):
 		"""Query the TakkTile USB interface for the pressure and temperature samples from a specified row of sensors.."""
