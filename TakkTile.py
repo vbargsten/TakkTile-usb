@@ -29,7 +29,7 @@ class TakkTile:
 		self.getCalibrationCoefficients()
 
 	def exists(self):
-		return ~bool(self.arrayID)
+		return bool(self.arrayID)^1
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
