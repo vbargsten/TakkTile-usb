@@ -14,17 +14,22 @@ def unTwos(x, bitlen):
 	return x
 
 class TakkTile:
-	def __init__(self):
+	def __init__(self, arrayID = 0):
 		# search for a USB device with the proper VID/PID combo
 		self.dev = usb.core.find(idVendor=0x59e3, idProduct=0x74C7)
 		if self.dev == None:
 			print("Can't find TakkTile USB interface!")
 			quit()
+		self.arrayID = arrayID
+		# populates bitmap of live sensors
 		self.getAlive()
 		# initalize list of list of dictionaries containing the polynomial coefficients for each sensor 
 		self.calibrationCoefficients = 9*[5*[0]]
 		# retrieve calibration bytes and calculate the polynomial's coefficients
 		self.getCalibrationCoefficients()
+
+	def exists(self):
+		return ~bool(self.arrayID)
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
