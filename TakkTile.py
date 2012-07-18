@@ -4,7 +4,6 @@
 # Licensed under the terms of the GNU GPLv3+
 
 import usb
-import numpy
 import re
 
 def unTwos(x, bitlen):
@@ -68,12 +67,14 @@ class TakkTile:
 				cc["c22"] /= float(1 << 25)
 				self.calibrationCoefficients[row][column] = cc
 
+
 	def getDataRaw(self, row):
 		"""Query the TakkTile USB interface for the pressure and temperature samples from a specified row of sensors.."""
+		_chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
 		# 0x7C is "get data" vendor request, takes a row as a wValue, returns 20 bytes
 		data = self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, row, 20)
-		# use numpy.resize to shape the 20 bytes into five chunks of four bytes each
-		data = numpy.resize(data, (5,4))
+		# use _chunk to shape the 20 bytes into five chunks of four bytes each
+		data = _chunk(data, 4)
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
 		temperature = [unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data]
