@@ -26,6 +26,8 @@ class TakkTile:
 		self.calibrationCoefficients = 9*[5*[0]]
 		# retrieve calibration bytes and calculate the polynomial's coefficients
 		self.getCalibrationCoefficients()
+		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
+			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
 
 	def exists(self):
 		return bool(self.arrayID)^1
@@ -110,10 +112,10 @@ class TakkTile:
 
 if __name__ == "__main__":
 	tact = TakkTile()
-	#print tact.getAlive() 
+	print tact.getAlive() 
+	print tact.UID
 	import time
-	while True:
-		start = time.time()
-		data = tact.getData(1)
-		end = time.time()
-		print round(end-start, 6), data
+	start = time.time()
+	data = tact.getData(1)
+	end = time.time()
+	print round(end-start, 6), data
