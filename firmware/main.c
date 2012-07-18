@@ -14,10 +14,12 @@ int main(void){
 	USB_ConfigureClock();
 	PORTR.DIRSET = 1 << 1;
 	PORTR.OUTSET = 1 << 1;
+
 	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm; 
 	TWIC.MASTER.BAUD = TWI_BAUD;
 	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
 	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
+
 	USB_Init();
 	PMIC.CTRL = PMIC_LOLVLEN_bm;
 	sei();	
@@ -130,8 +132,8 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 
 void getAlive(uint8_t *dataOut){
 	for (uint8_t row = 0; row < 8; row++) {
+		uint8_t sensor_bm = 0;
 		for (uint8_t column = 0; column < 5; column++) {
-			uint8_t sensor_bm;
 			// attiny address formula
 			uint8_t tinyAddr = (((row+1)&0x0F) << 4 | (column&0x07) << 1);
 			// if the write address ACKs....
