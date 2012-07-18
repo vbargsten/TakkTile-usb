@@ -34,27 +34,10 @@ uint8_t botherAddress(uint8_t address, bool stop){
 	if (address & 1) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 	// if address ends in zero, wait for a write to finish
 	else while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-	if (stop == 1) TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	if (stop) TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	// return 1 if NACK, 0 if ACK
 	return TWIC.MASTER.STATUS&TWI_MASTER_RXACK_bm;
 }
-
-uint8_t scanRow(uint8_t row){
-	uint8_t sensor_bm = 0;
-	for (uint8_t column = 0; column < 5; column++) {
-		// attiny address formula
-		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
-		// if the write address ACKs....
-		if (botherAddress(tinyAddr, 1) == 0) {
-			// ping the MPL115A2
-			if ( botherAddress(0xC0, 1) == 0 ) sensor_bm |= 1 << column;
-			// then turn off the sensor with an address LSB of 1
-			botherAddress(tinyAddr^1, 1);
-		}
-	}
-	return sensor_bm;
-}
-
 
 inline void startConversion(uint8_t row){
 	// enable all MPL115A2s
@@ -76,12 +59,12 @@ void getCalData(uint8_t row, uint8_t column, uint8_t *dataOut){
 	// iterate through columns of a given row, enabling the cell, clocking out four bytes of information starting at 0x00
 	TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
 	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-	// attiny address formula
-	uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
-	// enable cell
-	botherAddress(tinyAddr, 1);
-	// if MPL115A2 ACKs...
 	if ( (bitmap[row-1]&(1<<column)) == (1<<column) ){
+		// attiny address formula
+		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
+		// enable cell
+		botherAddress(tinyAddr, 1);
+		// start write to MPL115A2 
 		botherAddress(0xC0, 0);
 		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
 		// set start address to 0
@@ -100,10 +83,10 @@ void getCalData(uint8_t row, uint8_t column, uint8_t *dataOut){
 			// if transaction is almost over, set next byte to NACK
 			if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 		}
+		botherAddress(tinyAddr^1, 1);
 	}
 	else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
-	botherAddress(tinyAddr^1, 1);
 	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 }
 
@@ -147,8 +130,20 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 
 void getAlive(uint8_t *dataOut){
 	for (uint8_t row = 0; row < 8; row++) {
-		bitmap[row] = scanRow(row+1);
+		for (uint8_t column = 0; column < 5; column++) {
+			uint8_t sensor_bm;
+			// attiny address formula
+			uint8_t tinyAddr = (((row+1)&0x0F) << 4 | (column&0x07) << 1);
+			// if the write address ACKs....
+			if (botherAddress(tinyAddr, 1) == 0) {
+				// ping the MPL115A2
+				if ( botherAddress(0xC0, 1) == 0 ) sensor_bm |= 1 << column;
+				// then turn off the sensor with an address LSB of 1
+				botherAddress(tinyAddr^1, 1);
+			}
+		bitmap[row] = sensor_bm; 
 		dataOut[row] = bitmap[row];
+		}
 	}
 }
 
