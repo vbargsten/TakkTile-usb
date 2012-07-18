@@ -34,6 +34,7 @@ c:
 
 update: main.hex
 	python usb/bootloader/flash.py enter 59E3 74C7
+	python usb/bootloader/flash.py main.hex 
 
 HW_PRODUCT=TakkTile
 HW_VERSION=1.0
