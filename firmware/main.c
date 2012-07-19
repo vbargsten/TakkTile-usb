@@ -10,6 +10,8 @@
 #define F_TWI    400000
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
+inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row+1)&0x0F) << 4 | (column&0x07) << 1); }
+
 int main(void){
 	USB_ConfigureClock();
 	PORTR.DIRSET = 1 << 1;
@@ -61,9 +63,9 @@ void getCalData(uint8_t row, uint8_t column, uint8_t *dataOut){
 	// iterate through columns of a given row, enabling the cell, clocking out four bytes of information starting at 0x00
 	TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
 	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-	if ( (bitmap[row-1]&(1<<column)) == (1<<column) ){
+	if ( (bitmap[row]&(1<<column)) == (1<<column) ){
 		// attiny address formula
-		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
+		uint8_t tinyAddr = calcTinyAddr(row, column); 
 		// enable cell
 		botherAddress(tinyAddr, 1);
 		// start write to MPL115A2 
@@ -98,11 +100,11 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
 		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 		// attiny address formula
-		uint8_t tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1);
+		uint8_t tinyAddr = calcTinyAddr(row, column); 
 		// enable cell
 		botherAddress(tinyAddr, 1);
 		// if MPL115A2 ACKs...
-		if ( (bitmap[row-1]&(1<<column)) == (1<<column) ){
+		if ( (bitmap[row]&(1<<column)) == (1<<column) ){
 			botherAddress(0xC0, 0);
 			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
 			// set start address to 0
@@ -130,12 +132,13 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 	}
 }
 
+
 void getAlive(uint8_t *dataOut){
 	for (uint8_t row = 0; row < 8; row++) {
 		uint8_t sensor_bm = 0;
 		for (uint8_t column = 0; column < 5; column++) {
 			// attiny address formula
-			uint8_t tinyAddr = (((row+1)&0x0F) << 4 | (column&0x07) << 1);
+			uint8_t tinyAddr = calcTinyAddr(row, column); 
 			// if the write address ACKs....
 			if (botherAddress(tinyAddr, 1) == 0) {
 				// ping the MPL115A2
