@@ -47,7 +47,7 @@ class TakkTile:
 	def getCalibrationCoefficients(self):
 		""" This function implements the compensation & calibration coefficient calculations from page 15 of AN3785. """
 		# iterate through rows and columns
-		for row in [1]:
+		for row in [0]:
 			for column in range(5):
 				# get calibration data from a specified location
 				cd = self.getCalibrationData(row, column)  
@@ -116,6 +116,6 @@ if __name__ == "__main__":
 	print tact.UID
 	import time
 	start = time.time()
-	data = tact.getData(1)
+	data = tact.getData(0)
 	end = time.time()
 	print round(end-start, 6), data
