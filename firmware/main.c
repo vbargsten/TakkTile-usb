@@ -195,8 +195,9 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				return true;
 
 			case 0x7C: // return the 20 bytes of pressure and temperature information from a specified row
-				getRowData(req->wIndex, ep0_buf_in);
 				startConversion(req->wIndex);
+				_delay_ms(1);
+				getRowData(req->wIndex, ep0_buf_in);
 				USB_ep0_send(20);
 				return true;
 
