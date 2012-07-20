@@ -12,6 +12,24 @@ def unTwos(x, bitlen):
 		x = x - (1<<bitlen)
 	return x
 
+class overflow_buffer:
+	def __init__(self, datarange):
+		self.datarange = datarange
+		self.correction = 0
+		self.data = 0
+		self.new = True
+	def update(self, data):
+		if self.new:
+			self.new = False
+			self.data = data
+			return data
+		else:
+			diff = self.data - data
+			if diff > 2 * self.datarange / 3: self.correction += 1
+			elif diff <- 2 * self.datarange / 3: self.correction -= 1
+			self.data = data
+			return self.data + self.correction * self.datarange
+
 class TakkTile:
 	def __init__(self, arrayID = 0):
 		# search for a USB device with the proper VID/PID combo
@@ -22,6 +40,9 @@ class TakkTile:
 		self.arrayID = arrayID
 		# populates bitmap of live sensors
 		self.getAlive()
+		# create buffers to correct for overflow in sensor readings
+		self.temperature_buffer = [overflow_buffer(2**10) for i in range(len(self.getAlive()))]
+		self.pressure_buffer = [overflow_buffer(2**10) for i in range(len(self.getAlive()))]
 		# initalize list of list of dictionaries containing the polynomial coefficients for each sensor 
 		self.calibrationCoefficients = 9*[5*[0]]
 		# retrieve calibration bytes and calculate the polynomial's coefficients
@@ -79,9 +100,13 @@ class TakkTile:
 		data = _chunk(data, 4)
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
-		temperature = [unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data]
-		data = [unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data]
-		return data, temperature
+		#temperature = [unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data]
+		#data = [unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data]
+		# fix overflow problems
+		pressure = [self.pressure_buffer[i].update(unTwos(data[i][1] >> 6 | data[i][0] << 2, 10)) for i in range(len(data))]
+		temperature = [self.temperature_buffer[i].update(unTwos(data[i][3] >> 6 | data[i][2] << 2, 10)) for i in range(len(data))]
+		return pressure, temperature
+		#return data, temperature
 
 	def getData(self, row):
 		"""Return measured pressure in kPa, temperature compensated and factory calibrated."""
