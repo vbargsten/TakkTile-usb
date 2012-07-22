@@ -45,7 +45,7 @@ uint8_t botherAddress(uint8_t address, bool stop){
 
 inline void startConversion(uint8_t row){
 	// enable all MPL115A2s
-	botherAddress(0x1C, 1);
+	botherAddress(calcTinyAddr(row, 6), 1);
 	// write address byte of MPL115A2
 	botherAddress(0xC0, 0);
 	// write 1 to 0x12 - start conversion of pressure & temperature
@@ -56,7 +56,7 @@ inline void startConversion(uint8_t row){
 	// end transaction
 	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	// disable all MPL115A2s
-	botherAddress(0x1C^1, 1);
+	botherAddress(calcTinyAddr(row, 6)^1, 1);
 }
 
 void getCalData(uint8_t row, uint8_t column, uint8_t *dataOut){
