@@ -39,8 +39,8 @@ uint8_t botherAddress(uint8_t address, bool stop){
 	// if address ends in zero, wait for a write to finish
 	else while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
 	if (stop) TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-	// return 1 if NACK, 0 if ACK
-	return TWIC.MASTER.STATUS&TWI_MASTER_RXACK_bm;
+	// return 1 if ACK, 0 if NACK
+	return ((TWIC.MASTER.STATUS & TWI_MASTER_RXACK_bm) >> 4)^1; 
 }
 
 inline void startConversion(uint8_t row){
@@ -140,9 +140,9 @@ void getAlive(uint8_t *dataOut){
 			// attiny address formula
 			uint8_t tinyAddr = calcTinyAddr(row, column); 
 			// if the write address ACKs....
-			if (botherAddress(tinyAddr, 1) == 0) {
+			if (botherAddress(tinyAddr, 1) == 1) {
 				// ping the MPL115A2
-				if ( botherAddress(0xC0, 1) == 0 ) sensor_bm |= 1 << column;
+				if ( botherAddress(0xC0, 1) == 1 ) sensor_bm |= 1 << column;
 				// then turn off the sensor with an address LSB of 1
 				botherAddress(tinyAddr^1, 1);
 			}
