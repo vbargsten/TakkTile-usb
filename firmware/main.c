@@ -10,7 +10,7 @@
 #define F_TWI    400000
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
-inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row+1)&0x0F) << 4 | (column&0x07) << 1); }
+inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row)&0x0F) << 4 | (column&0x07) << 1); }
 
 int main(void){
 	USB_ConfigureClock();
@@ -26,7 +26,8 @@ int main(void){
 	PMIC.CTRL = PMIC_LOLVLEN_bm;
 	sei();	
 	for (;;){
-		USB_Task(); // lower-priority USB polling, like control requests
+		USB_Evt_Task();
+		USB_Task();
 	}
 }
 
