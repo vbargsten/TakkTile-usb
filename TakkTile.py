@@ -6,11 +6,7 @@
 import usb
 import re
 
-def unTwos(x, bitlen):
-	# basic function to undo Two's Complement signing
-	if( (x&(1<<(bitlen-1))) != 0 ):
-		x = x - (1<<bitlen)
-	return x
+unTwos = lambda x, bitlen: (x&(1<<(bitlen-1))) != 0 and x or x-(1<<bitlen)
 
 class overflow_buffer:
 	def __init__(self, datarange):
@@ -31,6 +27,10 @@ class overflow_buffer:
 			return self.data + self.correction * self.datarange
 
 class TakkTile:
+
+	_getTinyAddressFromRowColumn = lambda self, row, column: (((row)&0x0F) << 4 | (column&0x07) << 1)
+	exists = lambda self: bool(self.arrayID)^1
+
 	def __init__(self, arrayID = 0):
 		# search for a USB device with the proper VID/PID combo
 		self.dev = usb.core.find(idVendor=0x59e3, idProduct=0x74C7)
@@ -39,19 +39,16 @@ class TakkTile:
 			quit()
 		self.arrayID = arrayID
 		# populates bitmap of live sensors
-		self.getAlive()
+		self.alive = self.getAlive()
 		# create buffers to correct for overflow in sensor readings
-		self.temperature_buffer = [overflow_buffer(2**10) for i in range(len(self.getAlive()))]
-		self.pressure_buffer = [overflow_buffer(2**10) for i in range(len(self.getAlive()))]
+		self.temperature_buffer = [overflow_buffer(2**10) for i in range(len(self.alive))]
+		self.pressure_buffer = [overflow_buffer(2**10) for i in range(len(self.alive))]
 		# initalize list of list of dictionaries containing the polynomial coefficients for each sensor 
 		self.calibrationCoefficients = 9*[5*[0]]
 		# retrieve calibration bytes and calculate the polynomial's coefficients
 		self.getCalibrationCoefficients()
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
 			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
-
-	def exists(self):
-		return bool(self.arrayID)^1
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
@@ -60,10 +57,6 @@ class TakkTile:
 		bitmap = ''.join(map(pad, bitmap))
 		return [match.span()[0] for match in re.finditer('1', bitmap)] 
 	
-	def _getTinyAddressFromRowColumn(self, row, column = 0):
-		# implement the bitmath used to calculate the I2C address of an attiny
-		tinyAddr = ((row&0x0F) << 4 | (column&0x07) << 1)
-		return tinyAddr
 
 	def getCalibrationCoefficients(self):
 		""" This function implements the compensation & calibration coefficient calculations from page 15 of AN3785. """
@@ -137,11 +130,11 @@ class TakkTile:
 
 if __name__ == "__main__":
 	tact = TakkTile()
-	print tact.getAlive() 
+	print tact.alive
 	print tact.UID
 	import time
-	while True:
-		start = time.time()
-		data = tact.getData(0)
-		end = time.time()
-		print round(end-start, 6), data
+	start = time.time()
+	data = tact.getData(0)
+	end = time.time()
+	print round(end-start, 6), data
+	print tact.dev.ctrl_transfer(0x40|0x80, 0xBA, 1, 0x0e, 1)[0]
