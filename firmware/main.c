@@ -7,7 +7,7 @@
 
 #include <avr/eeprom.h>
 
-#define F_TWI    400000
+#define F_TWI    1000000
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
 inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row)&0x0F) << 4 | (column&0x07) << 1); }
@@ -45,18 +45,19 @@ uint8_t botherAddress(uint8_t address, bool stop){
 
 inline void startConversion(uint8_t row){
 	// enable all MPL115A2s
-	botherAddress(calcTinyAddr(row, 6), 1);
-	// write address byte of MPL115A2
-	botherAddress(0xC0, 0);
-	// write 1 to 0x12 - start conversion of pressure & temperature
-	TWIC.MASTER.DATA = 0x12;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-	TWIC.MASTER.DATA = 0x01;
-	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-	// end transaction
-	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-	// disable all MPL115A2s
-	botherAddress(calcTinyAddr(row, 6)^1, 1);
+	if (botherAddress(calcTinyAddr(row, 6), 1)){
+		// write address byte of MPL115A2
+		botherAddress(0xC0, 0);
+		// write 1 to 0x12 - start conversion of pressure & temperature
+		TWIC.MASTER.DATA = 0x12;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+		TWIC.MASTER.DATA = 0x01;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+		// end transaction
+		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+		// disable all MPL115A2s
+		botherAddress(calcTinyAddr(row, 6)^1, 1);
+	}
 }
 
 void getCalData(uint8_t row, uint8_t column, uint8_t *dataOut){
@@ -90,7 +91,6 @@ void getCalData(uint8_t row, uint8_t column, uint8_t *dataOut){
 		botherAddress(tinyAddr^1, 1);
 	}
 	else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 }
 
 void getRowData(uint8_t row, uint8_t *dataOut){
@@ -105,8 +105,8 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 		// if MPL115A2 ACKs...
 		if ( (bitmap[row]&(1<<column)) == (1<<column) ){
 			botherAddress(0xC0, 0);
-			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
-			// set start address to 0
+			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 	
+		// set start address to 0
 			TWIC.MASTER.DATA = 0x00;
 			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
 			// end transaction
@@ -123,10 +123,9 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 				// if transaction is almost over, set next byte to NACK
 				if (byteCt == 2) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 			}
+		botherAddress(tinyAddr^1, 1);
 		}
 		else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-		botherAddress(tinyAddr^1, 1);
-		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 	}
 }
 
