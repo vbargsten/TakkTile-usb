@@ -17,7 +17,6 @@ int main(void){
 	PORTR.DIRSET = 1 << 1;
 	PORTR.OUTSET = 1 << 1;
 
-	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm; 
 	TWIC.MASTER.BAUD = TWI_BAUD;
 	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
 	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
@@ -91,7 +90,6 @@ void getCalData(uint8_t row, uint8_t column, uint8_t *dataOut){
 		botherAddress(tinyAddr^1, 1);
 	}
 	else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-	TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
 	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 }
 
@@ -127,7 +125,6 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 			}
 		}
 		else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-		TWIC.MASTER.CTRLB = TWI_MASTER_QCEN_bm;
 		botherAddress(tinyAddr^1, 1);
 		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 	}
