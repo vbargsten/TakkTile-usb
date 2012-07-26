@@ -10,8 +10,6 @@
 #define F_TWI    1000000
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
-uint8_t row0data[20];
-
 inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row)&0x0F) << 4 | (column&0x07) << 1); }
 
 uint8_t botherAddress(uint8_t address, bool stop){
@@ -46,72 +44,75 @@ inline void startConversion(uint8_t row){
 	}
 }
 
-void getCalData(uint8_t row, uint8_t column, uint8_t *dataOut){
-	// iterate through columns of a given row, enabling the cell, clocking out four bytes of information starting at 0x00
-	TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
-	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-	if ( (bitmap[row]&(1<<column)) == (1<<column) ){
-		// attiny address formula
-		uint8_t tinyAddr = calcTinyAddr(row, column); 
-		// enable cell
-		botherAddress(tinyAddr, 1);
-		// start write to MPL115A2 
-		botherAddress(0xC0, 0);
-		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
-		// set start address to 0
-		TWIC.MASTER.DATA = 0x04;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-		// end transaction
-		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-		// start read from MPL115A2
-		TWIC.MASTER.ADDR = 0xC1;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-		// clock out four bytes
-		for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
-			dataOut[byteCt] = TWIC.MASTER.DATA;
-			// if transaction isn't over, wait for ACK
-			if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-			// if transaction is almost over, set next byte to NACK
-			if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+void getCalibrationData(void){
+	for (uint8_t row = 0; row < 8; row++) {
+		for (uint8_t column = 0; column < 5; column++) {
+			TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+			if ( (bitmap[row]&(1<<column)) == (1<<column) ){
+				// attiny address formula
+				uint8_t tinyAddr = calcTinyAddr(row, column); 
+				// enable cell
+				botherAddress(tinyAddr, 1);
+				// start write to MPL115A2 
+				botherAddress(0xC0, 0);
+				TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
+				// set start address to 0
+				TWIC.MASTER.DATA = 0x04;
+				while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+				// end transaction
+				TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+				// start read from MPL115A2
+				TWIC.MASTER.ADDR = 0xC1;
+				while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+				for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
+					calibrationData[60*row+12*column+byteCt] = TWIC.MASTER.DATA;
+					// if transaction isn't over, wait for ACK
+					if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+					// if transaction is almost over, set next byte to NACK
+					if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+				}
+				botherAddress(tinyAddr^1, 1);
+			}
+			else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 		}
-		botherAddress(tinyAddr^1, 1);
 	}
-	else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 }
 
-void getRowData(uint8_t row, uint8_t *dataOut){
-	// iterate through columns of a given row, enabling the cell, clocking out four bytes of information starting at 0x00
-	for (uint8_t column = 0; column < 5; column++) {
-		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
-		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-		// attiny address formula
-		if ( (bitmap[row]&(1<<column)) == (1<<column) ){
-			uint8_t tinyAddr = calcTinyAddr(row, column); 
-			// enable cell
-			botherAddress(tinyAddr, 1);
-			// start write to MPL115A2
-			botherAddress(0xC0, 0);
-			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 	
-			// set start address to 0
-			TWIC.MASTER.DATA = 0x00;
-			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-			// end transaction
-			TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-			// start read from MPL115A2
-			TWIC.MASTER.ADDR = 0xC1;
-			while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-			// clock out four bytes
-			for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
-				uint8_t index = byteCt + column*4;
-				dataOut[index] = TWIC.MASTER.DATA;
-				// if transaction isn't over, wait for ACK
-				if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-				// if transaction is almost over, set next byte to NACK
-				if (byteCt == 2) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+void getSensorData(void){
+	for (uint8_t row = 0; row < 8; row++) {
+		for (uint8_t column = 0; column < 5; column++) {
+			TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+			// attiny address formula
+			if ( (bitmap[row]&(1<<column)) == (1<<column) ){
+				uint8_t tinyAddr = calcTinyAddr(row, column); 
+				// enable cell
+				botherAddress(tinyAddr, 1);
+				// start write to MPL115A2
+				botherAddress(0xC0, 0);
+				TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 	
+				// set start address to 0
+				TWIC.MASTER.DATA = 0x00;
+				while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+				// end transaction
+				TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+				// start read from MPL115A2
+				TWIC.MASTER.ADDR = 0xC1;
+				while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+				// clock out four bytes
+				for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
+					uint8_t index = byteCt + column*4 + row*20;
+					sensorData[index] = TWIC.MASTER.DATA;
+					// if transaction isn't over, wait for ACK
+						if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+					// if transaction is almost over, set next byte to NACK
+					if (byteCt == 2) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+				}
+			botherAddress(tinyAddr^1, 1);
 			}
-		botherAddress(tinyAddr^1, 1);
+			else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 		}
-		else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	}
 }
 
@@ -136,7 +137,7 @@ void getAlive(void){
 
 ISR(TCC0_CCA_vect){
     PORTR.OUTTGL = 1 << 1;
-	getRowData(0, row0data);
+	getSensorData();
 	startConversion(0);
 	TCC0.CNT = 0;
 }
@@ -155,8 +156,9 @@ int main(void){
 	TCC0.INTCTRLB = TC_CCAINTLVL_LO_gc;
 	TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
 	TCC0.CTRLB = TC0_CCAEN_bm | TC_WGMODE_SINGLESLOPE_gc;
-	TCC0.CCA = 480; 
+	TCC0.CCA = 120; 
 	getAlive();
+	getCalibrationData();
 
 	USB_Init();
 	PMIC.CTRL = PMIC_LOLVLEN_bm;
@@ -202,19 +204,23 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				USB_ep0_send(8);
 				return true;
 
-			case 0x6C: // return the 12 calibration bytes for a specified address
-				getCalData(req->wIndex, req->wValue, ep0_buf_in);
+			case 0x6C: {
+				uint8_t offset = 60*req->wIndex+12*req->wValue;
+				for (uint8_t i = 0; i < 12; i++) {ep0_buf_in[i] = calibrationData[offset+i];}
 				USB_ep0_send(12);
 				return true;
+				}
 
-			case 0x7C: // return the 20 bytes of pressure and temperature information from a specified row
+			case 0x7C: { 
 				if (TCC0.PER == 0){
 					startConversion(0);
 					TCC0.PER = 1<<15;
 				}
-				for (uint8_t i = 0; i < 20; i++) {ep0_buf_in[i] = row0data[i];}
+				uint8_t offset = req->wIndex*20;
+				for (uint8_t i = 0; i < 20; i++) {ep0_buf_in[i] = sensorData[offset+i];}
 				USB_ep0_send(20);
 				return true;
+				}
 
 			case 0xE0: // Read EEPROM
 				eeprom_read_block(ep0_buf_in, (void*)(req->wIndex*64), 64);

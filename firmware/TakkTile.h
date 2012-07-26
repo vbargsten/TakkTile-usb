@@ -9,6 +9,8 @@
 #include "usb/usb.h"
 
 uint8_t bitmap[8];
+uint8_t sensorData[256];
+uint8_t calibrationData[512];
 
 // function prototypes
 void configHardware(void);
