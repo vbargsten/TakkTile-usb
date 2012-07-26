@@ -6,7 +6,7 @@
 import usb
 import re
 
-unTwos = lambda x, bitlen: (x&(1<<(bitlen-1))) != 0 and x or x-(1<<bitlen)
+unTwos = lambda x, bitlen: x-(1<<bitlen) if (x&(1<<(bitlen-1))) else x
 
 class TakkTile:
 
@@ -108,7 +108,9 @@ if __name__ == "__main__":
 	print tact.alive
 	print tact.UID
 	import time
-	start = time.time()
-	data = tact.getData(0)
-	end = time.time()
-	print round(end-start, 6), data
+	while True:
+		start = time.time()
+		data = tact.getData(0)
+		end = time.time()
+		print round(end-start, 6), data
+		time.sleep(.005)
