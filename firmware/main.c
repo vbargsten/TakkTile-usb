@@ -10,25 +10,9 @@
 #define F_TWI    1000000
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
+uint8_t row0data[20];
+
 inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row)&0x0F) << 4 | (column&0x07) << 1); }
-
-int main(void){
-	USB_ConfigureClock();
-	PORTR.DIRSET = 1 << 1;
-	PORTR.OUTSET = 1 << 1;
-
-	TWIC.MASTER.BAUD = TWI_BAUD;
-	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
-	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
-
-	USB_Init();
-	PMIC.CTRL = PMIC_LOLVLEN_bm;
-	sei();	
-	for (;;){
-		USB_Evt_Task();
-		USB_Task();
-	}
-}
 
 uint8_t botherAddress(uint8_t address, bool stop){
 	TWIC.MASTER.CTRLB |= TWI_MASTER_QCEN_bm;
@@ -101,8 +85,8 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
 		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 		// attiny address formula
-		uint8_t tinyAddr = calcTinyAddr(row, column); 
 		if ( (bitmap[row]&(1<<column)) == (1<<column) ){
+			uint8_t tinyAddr = calcTinyAddr(row, column); 
 			// enable cell
 			botherAddress(tinyAddr, 1);
 			// start write to MPL115A2
@@ -132,7 +116,7 @@ void getRowData(uint8_t row, uint8_t *dataOut){
 }
 
 
-void getAlive(uint8_t *dataOut){
+void getAlive(void){
 	for (uint8_t row = 0; row < 8; row++) {
 		uint8_t sensor_bm = 0;
 		for (uint8_t column = 0; column < 5; column++) {
@@ -146,12 +130,42 @@ void getAlive(uint8_t *dataOut){
 				botherAddress(tinyAddr^1, 1);
 			}
 		bitmap[row] = sensor_bm; 
-		dataOut[row] = bitmap[row];
 		}
 	}
 }
 
+ISR(TCC0_CCA_vect){
+    PORTR.OUTTGL = 1 << 1;
+	getRowData(0, row0data);
+	startConversion(0);
+	TCC0.CNT = 0;
+}
+int main(void){
+	USB_ConfigureClock();
+	PORTR.DIRSET = 1 << 1;
+	PORTR.OUTSET = 1 << 1;
 
+	TWIC.MASTER.BAUD = TWI_BAUD;
+	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
+	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
+
+	// config samples timer
+	TCC0.PER = 0;
+	TCC0.CNT = 0;
+	TCC0.INTCTRLB = TC_CCAINTLVL_LO_gc;
+	TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
+	TCC0.CTRLB = TC0_CCAEN_bm | TC_WGMODE_SINGLESLOPE_gc;
+	TCC0.CCA = 480; 
+	getAlive();
+
+	USB_Init();
+	PMIC.CTRL = PMIC_LOLVLEN_bm;
+	sei();	
+	for (;;){
+		USB_Evt_Task();
+		USB_Task();
+	}
+}
 
 #define xstringify(s) stringify(s)
 #define stringify(s) #s
@@ -184,7 +198,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				return true;
 
 			case 0x5C: // return bitmap of alive rows
-				getAlive(ep0_buf_in);	
+				for (uint8_t i = 0; i < 8; i++) {ep0_buf_in[i] = bitmap[i];}
 				USB_ep0_send(8);
 				return true;
 
@@ -194,9 +208,11 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				return true;
 
 			case 0x7C: // return the 20 bytes of pressure and temperature information from a specified row
-				startConversion(req->wIndex);
-				_delay_ms(1);
-				getRowData(req->wIndex, ep0_buf_in);
+				if (TCC0.PER == 0){
+					startConversion(0);
+					TCC0.PER = 1<<15;
+				}
+				for (uint8_t i = 0; i < 20; i++) {ep0_buf_in[i] = row0data[i];}
 				USB_ep0_send(20);
 				return true;
 

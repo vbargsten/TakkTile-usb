@@ -8,24 +8,6 @@ import re
 
 unTwos = lambda x, bitlen: (x&(1<<(bitlen-1))) != 0 and x or x-(1<<bitlen)
 
-class overflow_buffer:
-	def __init__(self, datarange):
-		self.datarange = datarange
-		self.correction = 0
-		self.data = 0
-		self.new = True
-	def update(self, data):
-		if self.new:
-			self.new = False
-			self.data = data
-			return data
-		else:
-			diff = self.data - data
-			if diff > 2 * self.datarange / 3: self.correction += 1
-			elif diff <- 2 * self.datarange / 3: self.correction -= 1
-			self.data = data
-			return self.data + self.correction * self.datarange
-
 class TakkTile:
 
 	_getTinyAddressFromRowColumn = lambda self, row, column: (((row)&0x0F) << 4 | (column&0x07) << 1)
@@ -40,13 +22,8 @@ class TakkTile:
 		self.arrayID = arrayID
 		# populates bitmap of live sensors
 		self.alive = self.getAlive()
-		# create buffers to correct for overflow in sensor readings
-		self.temperature_buffer = [overflow_buffer(2**10) for i in range(len(self.alive))]
-		self.pressure_buffer = [overflow_buffer(2**10) for i in range(len(self.alive))]
-		# initalize list of list of dictionaries containing the polynomial coefficients for each sensor 
-		self.calibrationCoefficients = 9*[5*[0]]
 		# retrieve calibration bytes and calculate the polynomial's coefficients
-		self.getCalibrationCoefficients()
+		self.calibrationCoefficients = [[self.getCalibrationCoefficients(row, column) for column in range(5)] for row in range(8)]
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
 			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
 
@@ -58,30 +35,31 @@ class TakkTile:
 		return [match.span()[0] for match in re.finditer('1', bitmap)] 
 	
 
-	def getCalibrationCoefficients(self):
+	def getCalibrationCoefficients(self, row, column):
 		""" This function implements the compensation & calibration coefficient calculations from page 15 of AN3785. """
 		# iterate through rows and columns
-		for row in [0]:
-			for column in range(5):
-				# get calibration data from a specified location
-				cd = self.getCalibrationData(row, column)  
-				# define short alias to save me keystrokes & enhance readability
-				cc = {"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}
-				# undo Two's complement if applicable, pack into proper bit width
-				cc["a0"] = unTwos(((cd[0] << 8) | cd[1]), 16)
-				cc["b1"] = unTwos(((cd[2] << 8) | cd[3]), 16)
-				cc["b2"] = unTwos(((cd[4] << 8) | cd[5]), 16)
-				cc["c12"] = unTwos(((cd[6] << 6) | (cd[7] >> 2)), 14)
-				cc["c11"] = unTwos(((cd[8] << 3) | (cd[9] >> 5)), 11)
-				cc["c22"] = unTwos(((cd[10] << 3) | (cd[11] >> 5)), 11)
-				# divide by float(1 << (fractionalBits + zeroPad)) to handle weirdness
-				cc["a0"] /= float(1 << 3)
-				cc["b1"] /= float(1 << 13)
-				cc["b2"] /= float(1 << 14)
-				cc["c12"] /= float(1 << 22)
-				cc["c11"] /= float(1 << 21)
-				cc["c22"] /= float(1 << 25)
-				self.calibrationCoefficients[row][column] = cc
+		# get calibration data from a specified location
+		cd = self.getCalibrationData(row, column)  
+		# define short alias to save me keystrokes & enhance readability
+		cc = {"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}
+		# cell not alive
+		if max(cd) == 0:
+			return cc
+		# undo Two's complement if applicable, pack into proper bit width
+		cc["a0"] = unTwos(((cd[0] << 8) | cd[1]), 16)
+		cc["b1"] = unTwos(((cd[2] << 8) | cd[3]), 16)
+		cc["b2"] = unTwos(((cd[4] << 8) | cd[5]), 16)
+		cc["c12"] = unTwos(((cd[6] << 6) | (cd[7] >> 2)), 14)
+		cc["c11"] = unTwos(((cd[8] << 3) | (cd[9] >> 5)), 11)
+		cc["c22"] = unTwos(((cd[10] << 3) | (cd[11] >> 5)), 11)
+		# divide by float(1 << (fractionalBits + zeroPad)) to handle weirdness
+		cc["a0"] /= float(1 << 3)
+		cc["b1"] /= float(1 << 13)
+		cc["b2"] /= float(1 << 14)
+		cc["c12"] /= float(1 << 22)
+		cc["c11"] /= float(1 << 21)
+		cc["c22"] /= float(1 << 25)
+		return cc
 
 
 	def getDataRaw(self, row):
@@ -93,13 +71,10 @@ class TakkTile:
 		data = _chunk(data, 4)
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
-		#temperature = [unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data]
-		#data = [unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data]
+		temperature = [unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data]
+		data = [unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data]
 		# fix overflow problems
-		pressure = [self.pressure_buffer[i].update(unTwos(data[i][1] >> 6 | data[i][0] << 2, 10)) for i in range(len(data))]
-		temperature = [self.temperature_buffer[i].update(unTwos(data[i][3] >> 6 | data[i][2] << 2, 10)) for i in range(len(data))]
-		return pressure, temperature
-		#return data, temperature
+		return data, temperature
 
 	def getData(self, row):
 		"""Return measured pressure in kPa, temperature compensated and factory calibrated."""
@@ -137,4 +112,3 @@ if __name__ == "__main__":
 	data = tact.getData(0)
 	end = time.time()
 	print round(end-start, 6), data
-	print tact.dev.ctrl_transfer(0x40|0x80, 0xBA, 1, 0x0e, 1)[0]
