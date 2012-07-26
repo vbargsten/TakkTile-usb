@@ -26,22 +26,19 @@ uint8_t botherAddress(uint8_t address, bool stop){
 }
 
 inline void startConversion(uint8_t row){
-	// if sensor 2 is alive on a given row, the row is alive
-	if ( (bitmap[row]&(1<<2)) == (1<<2) ){
 	// enable all MPL115A2s
-		botherAddress(calcTinyAddr(row, 6), 1);
-		// write address byte of MPL115A2
-		botherAddress(0xC0, 0);
-		// write 1 to 0x12 - start conversion of pressure & temperature
-		TWIC.MASTER.DATA = 0x12;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-		TWIC.MASTER.DATA = 0x01;
-		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-		// end transaction
-		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-		// disable all MPL115A2s
-		botherAddress(calcTinyAddr(row, 6)^1, 1);
-	}
+	botherAddress(calcTinyAddr(row, 6), 1);
+	// write address byte of MPL115A2
+	botherAddress(0xC0, 0);
+	// write 1 to 0x12 - start conversion of pressure & temperature
+	TWIC.MASTER.DATA = 0x12;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+	TWIC.MASTER.DATA = 0x01;
+	while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+	// end transaction
+	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+	// disable all MPL115A2s
+	botherAddress(calcTinyAddr(row, 6)^1, 1);
 }
 
 void getCalibrationData(void){

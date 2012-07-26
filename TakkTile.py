@@ -110,7 +110,7 @@ if __name__ == "__main__":
 	import time
 	while True:
 		start = time.time()
-		data = tact.getData(0)
+		data = tact.getData(2)
 		end = time.time()
 		print round(end-start, 6), data
 		time.sleep(.005)
