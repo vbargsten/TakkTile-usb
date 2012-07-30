@@ -6,7 +6,8 @@
 import usb
 import re
 
-unTwos = lambda x, bitlen: x-(1<<bitlen) if (x&(1<<(bitlen-1))) else x
+_unTwos = lambda x, bitlen: x-(1<<bitlen) if (x&(1<<(bitlen-1))) else x
+_chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
 
 class TakkTile:
 
@@ -46,12 +47,12 @@ class TakkTile:
 		if max(cd) == 0:
 			return cc
 		# undo Two's complement if applicable, pack into proper bit width
-		cc["a0"] = unTwos(((cd[0] << 8) | cd[1]), 16)
-		cc["b1"] = unTwos(((cd[2] << 8) | cd[3]), 16)
-		cc["b2"] = unTwos(((cd[4] << 8) | cd[5]), 16)
-		cc["c12"] = unTwos(((cd[6] << 6) | (cd[7] >> 2)), 14)
-		cc["c11"] = unTwos(((cd[8] << 3) | (cd[9] >> 5)), 11)
-		cc["c22"] = unTwos(((cd[10] << 3) | (cd[11] >> 5)), 11)
+		cc["a0"] = _unTwos(((cd[0] << 8) | cd[1]), 16)
+		cc["b1"] = _unTwos(((cd[2] << 8) | cd[3]), 16)
+		cc["b2"] = _unTwos(((cd[4] << 8) | cd[5]), 16)
+		cc["c12"] = _unTwos(((cd[6] << 6) | (cd[7] >> 2)), 14)
+		cc["c11"] = _unTwos(((cd[8] << 3) | (cd[9] >> 5)), 11)
+		cc["c22"] = _unTwos(((cd[10] << 3) | (cd[11] >> 5)), 11)
 		# divide by float(1 << (fractionalBits + zeroPad)) to handle weirdness
 		cc["a0"] /= float(1 << 3)
 		cc["b1"] /= float(1 << 13)
@@ -64,15 +65,14 @@ class TakkTile:
 
 	def getDataRaw(self, row):
 		"""Query the TakkTile USB interface for the pressure and temperature samples from a specified row of sensors.."""
-		_chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
 		# 0x7C is "get data" vendor request, takes a row as a wValue, returns 20 bytes
 		data = self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, row, 20)
 		# use _chunk to shape the 20 bytes into five chunks of four bytes each
 		data = _chunk(data, 4)
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
-		temperature = [unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data]
-		data = [unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data]
+		temperature = [_unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data]
+		data = [_unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data]
 		# fix overflow problems
 		return data, temperature
 
@@ -110,7 +110,7 @@ if __name__ == "__main__":
 	import time
 	while True:
 		start = time.time()
-		data = tact.getData(2)
+		data = tact.getData(3)
 		end = time.time()
 		print round(end-start, 6), data
 		time.sleep(.005)
