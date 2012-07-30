@@ -25,9 +25,9 @@ uint8_t botherAddress(uint8_t address, bool stop){
 	return ((TWIC.MASTER.STATUS & TWI_MASTER_RXACK_bm) >> 4)^1; 
 }
 
-inline void startConversion(uint8_t row){
+inline void startConversion(){
 	// enable all MPL115A2s
-	botherAddress(calcTinyAddr(row, 6), 1);
+	uint8_t ACK = botherAddress(calcTinyAddr(0, 6), 1);
 	// write address byte of MPL115A2
 	botherAddress(0xC0, 0);
 	// write 1 to 0x12 - start conversion of pressure & temperature
@@ -38,7 +38,7 @@ inline void startConversion(uint8_t row){
 	// end transaction
 	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	// disable all MPL115A2s
-	botherAddress(calcTinyAddr(row, 6)^1, 1);
+	if (ACK == 1) botherAddress(calcTinyAddr(0, 6)^1, 1);
 }
 
 void getCalibrationData(void){
@@ -135,35 +135,39 @@ void getAlive(void){
 ISR(TCC0_CCA_vect){
     PORTR.OUTTGL = 1 << 1;
 	getSensorData();
-	startConversion(0);
+	startConversion();
 	TCC0.CNT = 0;
 }
+
 int main(void){
 	USB_ConfigureClock();
 	PORTR.DIRSET = 1 << 1;
 	PORTR.OUTSET = 1 << 1;
+	USB_Init();
+	sei();	
 
 	TWIC.MASTER.BAUD = TWI_BAUD;
 	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
 	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
 
+	getAlive();
+
+	getCalibrationData();
+
 	// config samples timer
-	TCC0.PER = 0;
 	TCC0.CNT = 0;
 	TCC0.INTCTRLB = TC_CCAINTLVL_LO_gc;
 	TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
 	TCC0.CTRLB = TC0_CCAEN_bm | TC_WGMODE_SINGLESLOPE_gc;
 	TCC0.CCA = 120; 
-	getAlive();
-	getCalibrationData();
 
-	USB_Init();
 	PMIC.CTRL = PMIC_LOLVLEN_bm;
-	sei();	
+
 	for (;;){
 		USB_Evt_Task();
 		USB_Task();
 	}
+
 }
 
 #define xstringify(s) stringify(s)
@@ -210,7 +214,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 
 			case 0x7C: { 
 				if (TCC0.PER == 0){
-					startConversion(0);
+					startConversion();
 					TCC0.PER = 1<<15;
 				}
 				uint8_t offset = req->wIndex*20;
