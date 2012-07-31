@@ -13,9 +13,9 @@ _flatten = lambda l: list(itertools.chain(*[[x] if type(x) not in [list] else x 
 
 class TakkTile:
 
+	# get I2C address for a given cell from varying other references
 	_getTinyAddressFromRowColumn = lambda self, row, column: (((row)&0x0F) << 4 | (column&0x07) << 1)
 	_getTinyAddressFromIndex = lambda self, index: (((index/5)&0x0F) << 4 | ((index%5)&0x07) << 1)
-	exists = lambda self: bool(self.arrayID)^1
 
 	def __init__(self, arrayID = 0):
 		# search for a USB device with the proper VID/PID combo
@@ -26,24 +26,26 @@ class TakkTile:
 		self.arrayID = arrayID
 		# populates bitmap of live sensors
 		self.alive = self.getAlive()
-		# retrieve calibration bytes and calculate the polynomial's coefficients
+		# calibrationCoefficients is a dictionary mapping cell index to a dictionary of calibration variables 
 		self.calibrationCoefficients = dict(zip(self.alive, [self.getCalibrationCoefficients(index) for index in self.alive]))
+		# populate self.UID with vendor request to get the xmega's serialNumber
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
 			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
-		pad = lambda x: bin(x)[2::].zfill(5)[::-1]
+		# get an eight byte bitmap of live sensors
 		bitmap = self.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 8)
-		bitmap = ''.join(map(pad, bitmap))
+		# for each byte, convert it to binary format, trim off '0b', zerofill, and join to a shared string
+		bitmap = ''.join(map(lambda x: bin(x)[2::].zfill(5)[::-1], bitmap))
+		# find and return the index of all '1's
 		return [match.span()[0] for match in re.finditer('1', bitmap)] 
 	
 
 	def getCalibrationCoefficients(self, index):
 		""" This function implements the compensation & calibration coefficient calculations from page 15 of AN3785. """
-		# get calibration data from a specified location
+		# get raw calibration data from a specified location
 		cd = self.getCalibrationData(index)  
-		# define short alias to save me keystrokes & enhance readability
 		cc = {"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}
 		# cell not alive
 		if max(cd) == 0:
@@ -69,20 +71,23 @@ class TakkTile:
 		"""Query the TakkTile USB interface for the pressure and temperature samples from a specified row of sensors.."""
 		temperature = []
 		pressure = []
-		# 0x7C is "get data" vendor request, takes a row as a wValue, returns 20 bytes
+		# if the third MPL115A2 on a given row is alive and present, get information for that row
 		for ID in range(2,40,5):
 			if ID in self.alive:
+				# 0x7C is "get data" vendor request, takes a row as a wValue, returns 20 bytes
 				data = _chunk(self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, ID/5, 20), 4)
 				# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 				# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
 				temperature += [_unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data if datum.count(0) != 4]
 				pressure += [_unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data if datum.count(0) != 4]
+		# return a dictionary mapping sensor indexes to a tuple containing (pressure, temperature)
 		return dict(zip(self.alive, zip(pressure, temperature)))
 
 	def getData(self):
 		"""Return measured pressure in kPa, temperature compensated and factory calibrated."""
 		# get raw 10b data
 		data = self.getDataRaw()
+		# helper functions to increase readability
 		Padc = lambda cell: data[cell][0]
 		Tadc = lambda cell: data[cell][1]
 		# initialize array for compensated pressure readings
@@ -103,7 +108,7 @@ class TakkTile:
 	
 	def getCalibrationData(self, index):
 		"""Request the 12 calibration bytes from a sensor at a specified index."""
-		# get the attiny's virtual address for the specified row/column
+		# get the attiny's virtual address for the specified index 
 		# read the calibration data via vendor request and return it 
 		return self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 12)	
 
