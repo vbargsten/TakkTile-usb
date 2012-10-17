@@ -160,6 +160,7 @@ ISR(TCC0_CCA_vect){
 	getSensorData();
 	startConversion();
 	TCC0.CNT = 0;
+	USB_Task();
 }
 
 int main(void){
@@ -188,7 +189,6 @@ int main(void){
 
 	for (;;){
 		USB_Evt_Task();
-		USB_Task();
 	}
 
 }
