@@ -80,6 +80,8 @@ class TakkTile:
 				# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
 				temperature += [_unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data if datum.count(0) != 4]
 				pressure += [_unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data if datum.count(0) != 4]
+		pressure = map(abs, pressure)
+		temperature = map(abs, temperature)
 		# return a dictionary mapping sensor indexes to a tuple containing (pressure, temperature)
 		return dict(zip(self.alive, zip(pressure, temperature)))
 
@@ -117,9 +119,8 @@ if __name__ == "__main__":
 	print tact.alive
 	print tact.UID
 	import time
-	while True:
-		start = time.time()
-		data = tact.getData()
-		end = time.time()
-		print round(end-start, 6), data
-		time.sleep(.005)
+	start = time.time()
+	for i in range(100):
+		print tact.getData()
+	end = time.time()
+	print (end-start)/1e2
