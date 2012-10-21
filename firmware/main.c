@@ -1,18 +1,47 @@
 // (C) 2012 Biorobotics Lab and Nonolith Labs
 // (C) 2011, 2012 Ian Daniher (Nonolith Labs) <ian@nonolithlabs.com>
+// (C) 2012 Kevin Mehall (Nonolith Labs) <kevin@nonolithlabs.com>
 // Licensed under the terms of the GNU GPLv3+
 
 #include "TakkTile.h"
-
 #include <avr/eeprom.h>
+#include "usb_pipe.h"
+#include <avr/io.h>
 
 // run I2C at 1MHz
-#define F_TWI    1000000
+#define F_TWI	1000000
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
+
+bool timeout_or_sampling_no_longer_enabled = 0;
+
+USB_PIPE(ep_in, 0x81 | USB_EP_PP, USB_EP_TYPE_BULK_gc, 64, 512, 1, 0, PIPE_ENABLE_FLUSH);
+
+// Queue a byte to be sent over the bulk EP. Blocks if the buffer is full
+static inline void send_byte(uint8_t byte){
+	while (!usb_pipe_can_write(&ep_in, 1)); // This should never actually block if your buffer is big enough
+	pipe_write_byte(ep_in.pipe, byte);
+}
+
+// Sends a break to end the USB read and flushes the USB pipe
+static inline void break_and_flush(){
+	usb_pipe_flush(&ep_in);
+	while (!usb_pipe_can_write(&ep_in, 1)){
+		if (timeout_or_sampling_no_longer_enabled){
+			usb_pipe_reset(&ep_in);
+			return;
+		}	
+	}
+}
+
+/*
+Use this on the host with
+# Read up to maxsize bytes from the device, stopping and returning early when break_and_flush is called on the device
+dev.read(0x81, maxsize, 0, 100) 
+*/
+
 
 // equation for calculating I2C address from row and column
 inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row)&0x0F) << 4 | (column&0x07) << 1); }
-
 
 uint8_t botherAddress(uint8_t address, bool stop){
 	/* Function to write address byte to I2C, returns 1 if ACK, 0 if NACK. 
@@ -55,6 +84,9 @@ inline void startConversion(){
 void getCalibrationData(void){
 	/* Iterate through all rows and all columns. If that cell is alive,
 	read 12 calibration bytes from 0x04 into calibrationData. */
+	
+	// This could also easily be made to dump data over the bulk pipe with send_byte()
+	// on the host you would send the vReq, then do a bulk read for more than the max size, that would end with and synchronize on the break
 
 	for (uint8_t row = 0; row < 8; row++) {
 		for (uint8_t column = 0; column < 5; column++) {
@@ -78,7 +110,7 @@ void getCalibrationData(void){
 				while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 				for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
 					uint8_t index = 60*row+12*column+byteCt;
-					calibrationData[index] = TWIC.MASTER.DATA;
+					calibrationData[index] = TWIC.MASTER.DATA; //
 					// if transaction isn't over, wait for ACK
 					if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 					// if transaction is almost over, set next byte to NACK
@@ -89,6 +121,7 @@ void getCalibrationData(void){
 			else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 		}
 	}
+	// break_and_flush()
 }
 
 void getSensorData(void){
@@ -106,7 +139,7 @@ void getSensorData(void){
 				botherAddress(tinyAddr, 1);
 				// start write to MPL115A2
 				botherAddress(0xC0, 0);
-				TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 	
+				TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;	 
 				// set start address to 0
 				TWIC.MASTER.DATA = 0x00;
 				while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
@@ -117,8 +150,9 @@ void getSensorData(void){
 				while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 				// clock out four bytes
 				for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
-					uint8_t index = byteCt + column*4 + row*20;
-					sensorData[index] = TWIC.MASTER.DATA;
+					//uint8_t index = byteCt + column*4 + row*20;
+					//sensorData[index] = TWIC.MASTER.DATA;
+					send_byte(TWIC.MASTER.DATA);
 					// if transaction isn't over, wait for ACK
 					if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 					// if transaction is almost over, set next byte to NACK
@@ -129,6 +163,7 @@ void getSensorData(void){
 			else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 		}
 	}
+	break_and_flush();
 }
 
 
@@ -156,42 +191,58 @@ ISR(TCC0_CCA_vect){
 	/* Timer interrupt that trips 1ms after TCC0.CNT is set to 0.
 	Change the LED state, clock out all data from all alive sensors, and start next conversion. */
 
-    PORTR.OUTTGL = 1 << 1;
+	PORTR.OUTTGL = 1 << 1;
 	getSensorData();
 	startConversion();
 	TCC0.CNT = 0;
-	USB_Task();
 }
 
 int main(void){
 	USB_ConfigureClock();
 	PORTR.DIRSET = 1 << 1;
-	PORTR.OUTSET = 1 << 1;
 	USB_Init();
-	sei();	
+	
+	// Enable USB interrupts
+	USB.INTCTRLA = /*USB_SOFIE_bm |*/ USB_BUSEVIE_bm | USB_INTLVL_MED_gc;
+	USB.INTCTRLB = USB_TRNIE_bm | USB_SETUPIE_bm;
+	sei(); 
 
 	TWIC.MASTER.BAUD = TWI_BAUD;
 	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
 	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
 
-	getAlive();
-
-	getCalibrationData();
-
-	// config samples timer
-	TCC0.CNT = 0;
-	TCC0.INTCTRLB = TC_CCAINTLVL_LO_gc;
-	TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
-	TCC0.CTRLB = TC0_CCAEN_bm | TC_WGMODE_SINGLESLOPE_gc;
-	TCC0.CCA = 120; 
-
-	PMIC.CTRL = PMIC_LOLVLEN_bm;
-
 	for (;;){
-		USB_Evt_Task();
+	//	USB_Evt_Task(); // now done by ISR
+	//	USB_Task();
 	}
 
 }
+
+void EVENT_USB_Device_ConfigurationChanged(uint8_t config){
+	PORTR.OUTSET = 1 << 1;	
+	usb_pipe_init(&ep_in);
+}
+
+ISR(USB_BUSEVENT_vect){
+	if (USB.INTFLAGSACLR & USB_SOFIF_bm){
+		USB.INTFLAGSACLR = USB_SOFIF_bm;
+	}else if (USB.INTFLAGSACLR & (USB_CRCIF_bm | USB_UNFIF_bm | USB_OVFIF_bm)){
+		USB.INTFLAGSACLR = (USB_CRCIF_bm | USB_UNFIF_bm | USB_OVFIF_bm);
+	}else if (USB.INTFLAGSACLR & USB_STALLIF_bm){
+		USB.INTFLAGSACLR = USB_STALLIF_bm;
+	}else{
+		USB.INTFLAGSACLR = USB_SUSPENDIF_bm | USB_RESUMEIF_bm | USB_RSTIF_bm;
+		USB_Evt_Task();
+	}
+}
+
+ISR(USB_TRNCOMPL_vect){
+	USB.FIFOWP = 0;
+	USB.INTFLAGSBCLR = USB_SETUPIF_bm | USB_TRNIF_bm;
+	USB_Task();
+	usb_pipe_handle(&ep_in);
+}
+
 
 #define xstringify(s) stringify(s)
 #define stringify(s) #s
@@ -202,6 +253,8 @@ const char PROGMEM fwversion[] = xstringify(FW_VERSION);
 uint8_t usb_cmd = 0;
 uint8_t cmd_data = 0;
 
+// Add a flag to prevent other i2c-using requests from happening while sampling is enabled. ControlRequest is now from an ISR, and could happen at any time inside of GetData and friends.
+
 /** Event handler for the library USB Control Request reception event. */
 bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 	// zero out ep0_buf_in
@@ -210,12 +263,27 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 	if ((req->bmRequestType & CONTROL_REQTYPE_TYPE) == REQTYPE_VENDOR){
 		switch(req->bRequest){
 			case 0x00: // Info
+
 				if (req->wIndex == 0){
 					USB_ep0_send_progmem((uint8_t*)hwversion, sizeof(hwversion));
 				}else if (req->wIndex == 1){
 					USB_ep0_send_progmem((uint8_t*)fwversion, sizeof(fwversion));
 				}
 				
+				return true;
+
+			// start sampling
+			// mnemonic - 0xConfigure7imer
+			case 0xC7:
+				TCC0.CNT = 0;
+				TCC0.INTCTRLB = TC_CCAINTLVL_LO_gc;
+				TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
+				TCC0.CTRLB = TC0_CCAEN_bm | TC_WGMODE_SINGLESLOPE_gc;
+				TCC0.CCA = req->wValue;
+				PMIC.CTRL = PMIC_LOLVLEN_bm;
+				startConversion();
+				_delay_ms(1);
+				USB_ep0_send(0);
 				return true;
 
 			// bother a specified I2C address, return '1' if address ACKs, '0' if NACK
@@ -228,18 +296,21 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// return a bitmap of alive cells 
 			// mnemonic - 0x5Can
 			case 0x5C: 
+				getAlive();
+				_delay_ms(1);
 				for (uint8_t i = 0; i < 8; i++) {ep0_buf_in[i] = bitmap[i];}
 				USB_ep0_send(8);
 				return true;
 
 			case 0x6C: {
+				getCalibrationData();
 				uint8_t offset = 60*req->wIndex+12*req->wValue;
 				for (uint8_t i = 0; i < 12; i++) {ep0_buf_in[i] = calibrationData[offset+i];}
 				USB_ep0_send(12);
 				return true;
 				}
 
-			case 0x7C: { 
+			/*case 0x7C: { 
 				if (TCC0.PER == 0){
 					startConversion();
 					TCC0.PER = 1<<15;
@@ -248,7 +319,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				for (uint8_t i = 0; i < 20; i++) {ep0_buf_in[i] = sensorData[offset+i];}
 				USB_ep0_send(20);
 				return true;
-				}
+				}*/
 
 			// read EEPROM	
 			case 0xE0: 
@@ -279,3 +350,4 @@ void EVENT_USB_Device_ControlOUT(uint8_t* buf, uint8_t count){
 			break;
 	}
 }
+

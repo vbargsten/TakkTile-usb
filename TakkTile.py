@@ -119,8 +119,8 @@ if __name__ == "__main__":
 	print tact.alive
 	print tact.UID
 	import time
-	start = time.time()
-	for i in range(100):
-		print tact.getData()
-	end = time.time()
-	print (end-start)/1e2
+	for i in range(10):
+		start = time.time()
+		data = tact.getData()
+		end = time.time()
+		print end-start, data
