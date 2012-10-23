@@ -5,9 +5,8 @@ HW_VERSION=1.0
 FW_VERSION=$(shell git describe --always --dirty='*')
 
 # MCU name
-MCU = atxmega32a4
+MCU = atxmega32a4u
 ARCH = XMEGA
-DEVICE = AVR_ATxmega32A4U
 
 VID = 59e3 
 PID = 74c7
@@ -104,7 +103,6 @@ CSTANDARD = -std=gnu99
 # Place -D or -U options here for C sources
 CDEFS  = -DF_CPU=$(F_CPU)UL
 CDEFS += -DF_USB=$(F_USB)UL
-CDEFS += -D __$(DEVICE)__
 CDEFS += -DARCH=ARCH_$(ARCH)
 CDEFS += $(USB_OPTS)
 CDEFS += -D'HW_VERSION=$(HW_VERSION)'

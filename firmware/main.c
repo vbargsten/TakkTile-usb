@@ -205,17 +205,15 @@ int main(void){
 	// Enable USB interrupts
 	USB.INTCTRLA = /*USB_SOFIE_bm |*/ USB_BUSEVIE_bm | USB_INTLVL_MED_gc;
 	USB.INTCTRLB = USB_TRNIE_bm | USB_SETUPIE_bm;
+
+	PMIC.CTRL = PMIC_LOLVLEN_bm | PMIC_MEDLVLEN_bm | PMIC_HILVLEN_bm;
 	sei(); 
 
 	TWIC.MASTER.BAUD = TWI_BAUD;
 	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
 	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
 
-	for (;;){
-	//	USB_Evt_Task(); // now done by ISR
-	//	USB_Task();
-	}
-
+	for (;;){}
 }
 
 void EVENT_USB_Device_ConfigurationChanged(uint8_t config){
