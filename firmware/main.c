@@ -12,7 +12,7 @@
 #define F_TWI	1000000
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
-bool timeout_or_sampling_no_longer_enabled = 0;
+bool timeout_or_sampling_no_longer_enabled = 1;
 
 USB_PIPE(ep_in, 0x81 | USB_EP_PP, USB_EP_TYPE_BULK_gc, 64, 512, 1, 0, PIPE_ENABLE_FLUSH);
 
@@ -272,6 +272,13 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				
 				return true;
 
+			// bother a specified I2C address, return '1' if address ACKs, '0' if NACK
+			// mnemonic - 0xBotherAddress
+			case 0xBA: 
+				ep0_buf_in[0] = botherAddress(req->wIndex, req->wValue);
+				USB_ep0_send(1);
+				return true;
+
 			// start sampling
 			// mnemonic - 0xConfigure7imer
 			case 0xC7:
@@ -286,13 +293,6 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				USB_ep0_send(0);
 				return true;
 
-			// bother a specified I2C address, return '1' if address ACKs, '0' if NACK
-			// mnemonic - 0xBotherAddress
-			case 0xBA: 
-				ep0_buf_in[0] = botherAddress(req->wIndex, req->wValue);
-				USB_ep0_send(1);
-				return true;
-
 			// return a bitmap of alive cells 
 			// mnemonic - 0x5Can
 			case 0x5C: 
@@ -302,15 +302,14 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				USB_ep0_send(8);
 				return true;
 
-			case 0x6C: {
+			case 0x6C:
 				getCalibrationData();
 				uint8_t offset = 60*req->wIndex+12*req->wValue;
 				for (uint8_t i = 0; i < 12; i++) {ep0_buf_in[i] = calibrationData[offset+i];}
 				USB_ep0_send(12);
 				return true;
-				}
 
-			/*case 0x7C: { 
+			/*case 0x7C:
 				if (TCC0.PER == 0){
 					startConversion();
 					TCC0.PER = 1<<15;
@@ -319,7 +318,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				for (uint8_t i = 0; i < 20; i++) {ep0_buf_in[i] = sensorData[offset+i];}
 				USB_ep0_send(20);
 				return true;
-				}*/
+			*/	
 
 			// read EEPROM	
 			case 0xE0: 
