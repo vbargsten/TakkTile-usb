@@ -12,7 +12,7 @@
 #define F_TWI	1000000
 #define TWI_BAUD ((F_CPU / (2 * F_TWI)) - 5) 
 
-bool timeout_or_sampling_no_longer_enabled = 1;
+bool timeout_or_sampling_no_longer_enabled = 0;
 
 USB_PIPE(ep_in, 0x81 | USB_EP_PP, USB_EP_TYPE_BULK_gc, 64, 512, 1, 0, PIPE_ENABLE_FLUSH);
 

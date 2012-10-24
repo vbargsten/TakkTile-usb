@@ -118,9 +118,11 @@ if __name__ == "__main__":
 	tact = TakkTile()
 	print tact.alive
 	print tact.UID
+	print tact.calibrationCoefficients
 	import time
 	for i in range(10):
 		start = time.time()
+		print tact.dev.read(0x81, 64, 0, 100)  
 		data = tact.getData()
 		end = time.time()
 		print end-start, data
