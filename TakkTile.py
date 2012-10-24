@@ -115,14 +115,20 @@ class TakkTile:
 		return self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 12)	
 
 if __name__ == "__main__":
+	import sys, traceback 
 	tact = TakkTile()
 	print tact.alive
 	print tact.UID
 	print tact.calibrationCoefficients
+	print "Timer Started:", tact.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
 	import time
-	for i in range(10):
+	for i in range(3):
 		start = time.time()
-		print tact.dev.read(0x81, 64, 0, 100)  
-		data = tact.getData()
+		try:
+			print tact.dev.read(0x81, 100, 0, 100)  
+		except:
+			exc_type, exc_value, exc_traceback = sys.exc_info()
+			traceback.print_exception(exc_type, exc_value, exc_traceback,
+                              limit=2, file=sys.stdout)
 		end = time.time()
-		print end-start, data
+		print end-start
