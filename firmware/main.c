@@ -76,8 +76,8 @@ inline void startConversion(){
 }
 
 void getCalibrationData(void){
-	/* Iterate through all rows and all columns. If that cell is alive,
-	read 12 calibration bytes from 0x04 into calibrationData. */
+	// Iterate through all rows and all columns. If that cell is alive,
+	// read 12 calibration bytes from 0x04 into calibrationData.
 	
 	// This could also easily be made to dump data over the bulk pipe with send_byte()
 	// on the host you would send the vReq, then do a bulk read for more than the max size, that would end with and synchronize on the break
@@ -180,11 +180,12 @@ void getAlive(void){
 }
 
 ISR(TCC0_OVF_vect){
-	/* Timer interrupt that trips 1ms after TCC0.CNT is set to 0.
-	Change the LED state, clock out all data from all alive sensors, and start next conversion. */
+	// Timer interrupt that trips 1ms after TCC0.CNT is set to 0.
+	// Change the LED state, clock out all data from all alive sensors, and start next conversion
 
 	PORTR.OUTTGL = 1 << 1;
 	getSensorData();
+
 	startConversion();
 }
 
@@ -194,7 +195,7 @@ int main(void){
 	USB_Init();
 	
 	// Enable USB interrupts
-	USB.INTCTRLA = /*USB_SOFIE_bm |*/ USB_BUSEVIE_bm | USB_INTLVL_MED_gc;
+	USB.INTCTRLA = USB_BUSEVIE_bm | USB_INTLVL_MED_gc;
 	USB.INTCTRLB = USB_TRNIE_bm | USB_SETUPIE_bm;
 
 	PMIC.CTRL = PMIC_LOLVLEN_bm | PMIC_MEDLVLEN_bm | PMIC_HILVLEN_bm;
@@ -273,7 +274,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			case 0xC7:
 				TCC0.CNT = 0;
 				TCC0.PER = 1200;
-				TCC0.INTCTRLB = TC_OVFINTLVL_LO_gc;
+				TCC0.INTCTRLA = TC_OVFINTLVL_LO_gc;
 				TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
 				TCC0.CTRLB = TC_WGMODE_SINGLESLOPE_gc;
 				startConversion();
