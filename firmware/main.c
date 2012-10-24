@@ -33,20 +33,14 @@ static inline void break_and_flush(){
 	}
 }
 
-/*
-Use this on the host with
-# Read up to maxsize bytes from the device, stopping and returning early when break_and_flush is called on the device
-dev.read(0x81, maxsize, 0, 100) 
-*/
-
 
 // equation for calculating I2C address from row and column
 inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row)&0x0F) << 4 | (column&0x07) << 1); }
 
 uint8_t botherAddress(uint8_t address, bool stop){
-	/* Function to write address byte to I2C, returns 1 if ACK, 0 if NACK. 
-	'stop' specifies an optional stop bit on the transaction.
-	NB: Don't read from a non-existant address */
+	// Function to write address byte to I2C, returns 1 if ACK, 0 if NACK.
+	// 'stop' specifies an optional stop bit on the transaction.
+	// NB: Don't read from a non-existant address
 
 	// quick command mode - RIF/WIF trips on ACK
 	TWIC.MASTER.CTRLB |= TWI_MASTER_QCEN_bm;
@@ -63,8 +57,8 @@ uint8_t botherAddress(uint8_t address, bool stop){
 }
 
 inline void startConversion(){
-	/* Initiates the analog-to-digital conversion of pressure and temperature
-	on all MPL115A2 sensors on all attached rows. */
+	// Initiates the analog-to-digital conversion of pressure and temperature
+	// on all MPL115A2 sensors on all attached rows.
 
 	// enable all MPL115A2 by writing to 0x0C
 	uint8_t ACK = botherAddress(calcTinyAddr(0, 6), 1);
@@ -110,7 +104,7 @@ void getCalibrationData(void){
 				while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 				for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
 					uint8_t index = 60*row+12*column+byteCt;
-					calibrationData[index] = TWIC.MASTER.DATA; //
+					calibrationData[index] = TWIC.MASTER.DATA;
 					// if transaction isn't over, wait for ACK
 					if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 					// if transaction is almost over, set next byte to NACK
@@ -150,8 +144,6 @@ void getSensorData(void){
 				while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 				// clock out four bytes
 				for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
-					//uint8_t index = byteCt + column*4 + row*20;
-					//sensorData[index] = TWIC.MASTER.DATA;
 					send_byte(TWIC.MASTER.DATA);
 					// if transaction isn't over, wait for ACK
 					if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
@@ -187,14 +179,13 @@ void getAlive(void){
 	}
 }
 
-ISR(TCC0_CCA_vect){
+ISR(TCC0_OVF_vect){
 	/* Timer interrupt that trips 1ms after TCC0.CNT is set to 0.
 	Change the LED state, clock out all data from all alive sensors, and start next conversion. */
 
 	PORTR.OUTTGL = 1 << 1;
 	getSensorData();
 	startConversion();
-	TCC0.CNT = 0;
 }
 
 int main(void){
@@ -281,14 +272,13 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// mnemonic - 0xConfigure7imer
 			case 0xC7:
 				TCC0.CNT = 0;
-				TCC0.INTCTRLB = TC_CCAINTLVL_LO_gc;
+				TCC0.PER = 1200;
+				TCC0.INTCTRLB = TC_OVFINTLVL_LO_gc;
 				TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
-				TCC0.CTRLB = TC0_CCAEN_bm | TC_WGMODE_SINGLESLOPE_gc;
-				TCC0.CCA = req->wValue;
-				PMIC.CTRL = PMIC_LOLVLEN_bm;
+				TCC0.CTRLB = TC_WGMODE_SINGLESLOPE_gc;
 				startConversion();
-				_delay_ms(1);
-				USB_ep0_send(0);
+				ep0_buf_in[0] = 1;
+				USB_ep0_send(1);
 				return true;
 
 			// return a bitmap of alive cells 
@@ -300,23 +290,13 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				USB_ep0_send(8);
 				return true;
 
-			case 0x6C:
+			case 0x6C: {
 				getCalibrationData();
 				uint8_t offset = 60*req->wIndex+12*req->wValue;
 				for (uint8_t i = 0; i < 12; i++) {ep0_buf_in[i] = calibrationData[offset+i];}
 				USB_ep0_send(12);
 				return true;
-
-			/*case 0x7C:
-				if (TCC0.PER == 0){
-					startConversion();
-					TCC0.PER = 1<<15;
 				}
-				uint8_t offset = req->wIndex*20;
-				for (uint8_t i = 0; i < 20; i++) {ep0_buf_in[i] = sensorData[offset+i];}
-				USB_ep0_send(20);
-				return true;
-			*/	
 
 			// read EEPROM	
 			case 0xE0: 
