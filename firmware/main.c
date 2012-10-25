@@ -189,6 +189,7 @@ ISR(TCC0_OVF_vect){
 	getSensorData();
 
 	startConversion();
+	TCC0.CNT = 0;
 }
 
 int main(void){
@@ -231,8 +232,8 @@ ISR(USB_BUSEVENT_vect){
 ISR(USB_TRNCOMPL_vect){
 	USB.FIFOWP = 0;
 	USB.INTFLAGSBCLR = USB_SETUPIF_bm | USB_TRNIF_bm;
-	USB_Task();
 	usb_pipe_handle(&ep_in);
+	USB_Task();
 }
 
 
@@ -274,11 +275,10 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// start sampling
 			// mnemonic - 0xConfigure7imer
 			case 0xC7:
-				TCC0.CNT = 0;
-				TCC0.PER = 1200;
 				TCC0.INTCTRLA = TC_OVFINTLVL_LO_gc;
 				TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
-				TCC0.CTRLB = TC_WGMODE_SINGLESLOPE_gc;
+				TCC0.PER = 1200;
+				TCC0.CNT = 0;
 				startConversion();
 				ep0_buf_in[0] = 1;
 				USB_ep0_send(1);
