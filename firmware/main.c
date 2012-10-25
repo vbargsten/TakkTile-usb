@@ -20,11 +20,13 @@ USB_PIPE(ep_in, 0x81 | USB_EP_PP, USB_EP_TYPE_BULK_gc, 64, 512, 1, 0, PIPE_ENABL
 static inline void send_byte(uint8_t byte){
 	while (!usb_pipe_can_write(&ep_in, 1)); // This should never actually block if your buffer is big enough
 	pipe_write_byte(ep_in.pipe, byte);
+	USB.INTFLAGSBSET = USB_TRNIF_bm;
 }
 
 // Sends a break to end the USB read and flushes the USB pipe
 static inline void break_and_flush(){
 	usb_pipe_flush(&ep_in);
+	USB.INTFLAGSBSET = USB_TRNIF_bm;
 	while (!usb_pipe_can_write(&ep_in, 1)){
 		if (timeout_or_sampling_no_longer_enabled){
 			usb_pipe_reset(&ep_in);
@@ -198,7 +200,7 @@ int main(void){
 	USB.INTCTRLA = USB_BUSEVIE_bm | USB_INTLVL_MED_gc;
 	USB.INTCTRLB = USB_TRNIE_bm | USB_SETUPIE_bm;
 
-	PMIC.CTRL = PMIC_LOLVLEN_bm | PMIC_MEDLVLEN_bm | PMIC_HILVLEN_bm;
+	PMIC.CTRL = PMIC_LOLVLEN_bm | PMIC_MEDLVLEN_bm;
 	sei(); 
 
 	TWIC.MASTER.BAUD = TWI_BAUD;
