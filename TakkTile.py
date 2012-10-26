@@ -120,7 +120,7 @@ if __name__ == "__main__":
 	print tact.alive
 	print tact.UID
 	print tact.calibrationCoefficients
-	print "Timer Running:", tact.dev.ctrl_transfer(0x40|0x80, 0xC7, 525, 0xFF, 1)[0]  
+	print "Timer Running:", tact.dev.ctrl_transfer(0x40|0x80, 0xC7, 1200, 0xFF, 1)[0]  
 	import time
 	for i in range(10):
 		start = time.time()
@@ -132,4 +132,4 @@ if __name__ == "__main__":
                               limit=2, file=sys.stdout)
 		end = time.time()
 		print end-start
-	print "Timer Running:", tact.dev.ctrl_transfer(0x40|0x80, 0xC7, 525, 0x00, 1)[0]  
+	print "Timer Running:", tact.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  

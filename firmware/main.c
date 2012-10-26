@@ -284,12 +284,12 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				if (req->wIndex != 0) {
 					ep0_buf_in[0] = 1;
 					usb_pipe_reset(&ep_in);
-					timeout_or_sampling_no_longer_enabled = 0;}
+					timeout_or_sampling_no_longer_enabled = 0;
+					TCC0.PER = req->wValue;}
 				else {
 					ep0_buf_in[0] = 0;
 					usb_pipe_reset(&ep_in);
 					timeout_or_sampling_no_longer_enabled = 1;}
-				TCC0.PER = req->wValue; 
 				TCC0.CNT = 0;
 				USB_ep0_send(1);
 				return true;
