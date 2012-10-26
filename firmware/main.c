@@ -278,15 +278,18 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// start sampling
 			// mnemonic - 0xConfigure7imer
 			case 0xC7:
-				TCC0.INTCTRLA = TC_OVFINTLVL_LO_gc & req->wIndex;
-				TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
+				TCC0.INTCTRLA = TC_OVFINTLVL_LO_gc;
+				TCC0.CTRLA = TC_CLKSEL_DIV256_gc & req->wIndex;
 				startConversion();
+				if (req->wIndex != 0) {
+					ep0_buf_in[0] = 1;
+					timeout_or_sampling_no_longer_enabled = 0;}
+				else {
+					ep0_buf_in[0] = 0;
+					usb_pipe_reset(&ep_in);
+					timeout_or_sampling_no_longer_enabled = 1;}
 				TCC0.PER = req->wValue; 
 				TCC0.CNT = 0;
-				if (req->wIndex != 0) {
-					ep0_buf_in[0] = 1;}
-				else {
-					ep0_buf_in[0] = 0;}
 				USB_ep0_send(1);
 				return true;
 

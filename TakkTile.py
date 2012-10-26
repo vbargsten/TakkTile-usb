@@ -75,7 +75,8 @@ class TakkTile:
 		for ID in range(2,40,5):
 			if ID in self.alive:
 				# 0x7C is "get data" vendor request, takes a row as a wValue, returns 20 bytes
-				data = _chunk(self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, ID/5, 20), 4)
+#				data = _chunk(self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, ID/5, 20), 4)
+				data = _chunk(tact.dev.read(0x81, 100, 0, 100), 4)
 				# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 				# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
 				temperature += [_unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data if datum.count(0) != 4]
@@ -120,15 +121,16 @@ if __name__ == "__main__":
 	print tact.alive
 	print tact.UID
 	print tact.calibrationCoefficients
-	print "Timer Started:", tact.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
+	print "Timer Running:", tact.dev.ctrl_transfer(0x40|0x80, 0xC7, 525, 0xFF, 1)[0]  
 	import time
-	for i in range(3):
+	for i in range(10):
 		start = time.time()
 		try:
-			print tact.dev.read(0x81, 100, 0, 100)  
+			print tact.getData()
 		except:
 			exc_type, exc_value, exc_traceback = sys.exc_info()
 			traceback.print_exception(exc_type, exc_value, exc_traceback,
                               limit=2, file=sys.stdout)
 		end = time.time()
 		print end-start
+	print "Timer Running:", tact.dev.ctrl_transfer(0x40|0x80, 0xC7, 525, 0x00, 1)[0]  
