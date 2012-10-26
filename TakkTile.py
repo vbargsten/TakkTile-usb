@@ -69,18 +69,17 @@ class TakkTile:
 
 	def getDataRaw(self):
 		"""Query the TakkTile USB interface for the pressure and temperature samples from a specified row of sensors.."""
-		temperature = []
-		pressure = []
-		# if the third MPL115A2 on a given row is alive and present, get information for that row
-		for ID in range(2,40,5):
-			if ID in self.alive:
-				# 0x7C is "get data" vendor request, takes a row as a wValue, returns 20 bytes
-#				data = _chunk(self.dev.ctrl_transfer(0x40|0x80, 0x7C, 0, ID/5, 20), 4)
-				data = _chunk(tact.dev.read(0x81, 100, 0, 100), 4)
-				# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
-				# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
-				temperature += [_unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data if datum.count(0) != 4]
-				pressure += [_unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data if datum.count(0) != 4]
+		data = self.dev.read(0x81, 360, 0, 100)
+		try:
+			assert len(data) % 4 == 0
+			assert len(data)/4 == len(self.alive)
+		except:
+			raise Exception("data read from USB endpoint is not correct length")
+		data = _chunk(data, 4)
+		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
+		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
+		temperature = [_unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data if datum.count(0) != 4]
+		pressure = [_unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data if datum.count(0) != 4]
 		pressure = map(abs, pressure)
 		temperature = map(abs, temperature)
 		# return a dictionary mapping sensor indexes to a tuple containing (pressure, temperature)
