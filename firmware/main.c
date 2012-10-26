@@ -208,6 +208,9 @@ int main(void){
 	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
 	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
 
+	getAlive();
+	getCalibrationData();
+
 	for (;;){}
 }
 
@@ -275,26 +278,26 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// start sampling
 			// mnemonic - 0xConfigure7imer
 			case 0xC7:
-				TCC0.INTCTRLA = TC_OVFINTLVL_LO_gc;
+				TCC0.INTCTRLA = TC_OVFINTLVL_LO_gc & req->wIndex;
 				TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
-				TCC0.PER = 1200;
-				TCC0.CNT = 0;
 				startConversion();
-				ep0_buf_in[0] = 1;
+				TCC0.PER = req->wValue; 
+				TCC0.CNT = 0;
+				if (req->wIndex != 0) {
+					ep0_buf_in[0] = 1;}
+				else {
+					ep0_buf_in[0] = 0;}
 				USB_ep0_send(1);
 				return true;
 
 			// return a bitmap of alive cells 
 			// mnemonic - 0x5Can
 			case 0x5C: 
-				getAlive();
-				_delay_ms(1);
 				for (uint8_t i = 0; i < 8; i++) {ep0_buf_in[i] = bitmap[i];}
 				USB_ep0_send(8);
 				return true;
 
 			case 0x6C: {
-				getCalibrationData();
 				uint8_t offset = 60*req->wIndex+12*req->wValue;
 				for (uint8_t i = 0; i < 12; i++) {ep0_buf_in[i] = calibrationData[offset+i];}
 				USB_ep0_send(12);
