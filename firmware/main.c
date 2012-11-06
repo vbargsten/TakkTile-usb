@@ -181,7 +181,7 @@ void getAlive(void){
 	}
 }
 
-ISR(TCC0_OVF_vect){
+ISR(TCC0_CCA_vect){
 	// Timer interrupt that trips 1ms after TCC0.CNT is set to 0.
 	// Change the LED state, clock out all data from all alive sensors, and start next conversion
 
@@ -207,6 +207,12 @@ int main(void){
 	TWIC.MASTER.BAUD = TWI_BAUD;
 	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
 	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
+
+	TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
+	TCC0.CTRLB = TC0_CCAEN_bm | TC_WGMODE_SINGLESLOPE_gc;
+	TCC0.INTCTRLB = TC_CCAINTLVL_LO_gc;
+	TCC0.CCA = 120; 
+	TCC0.PER = 0;
 
 	getAlive();
 	getCalibrationData();
@@ -278,18 +284,19 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// start sampling
 			// mnemonic - 0xConfigure7imer
 			case 0xC7:
-				TCC0.INTCTRLA = TC_OVFINTLVL_LO_gc;
-				TCC0.CTRLA = TC_CLKSEL_DIV256_gc & req->wIndex;
-				startConversion();
 				if (req->wIndex != 0) {
+					TCC0.PER = 1 << 15;
+					startConversion();
 					ep0_buf_in[0] = 1;
 					usb_pipe_reset(&ep_in);
 					timeout_or_sampling_no_longer_enabled = 0;
-					TCC0.PER = req->wValue;}
+					TCC0.CCA = req->wValue;}
 				else {
+					TCC0.PER = 0;
 					ep0_buf_in[0] = 0;
 					usb_pipe_reset(&ep_in);
-					timeout_or_sampling_no_longer_enabled = 1;}
+					timeout_or_sampling_no_longer_enabled = 1;
+				}
 				TCC0.CNT = 0;
 				USB_ep0_send(1);
 				return true;
