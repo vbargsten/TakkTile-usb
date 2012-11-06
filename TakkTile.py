@@ -113,7 +113,7 @@ class TakkTile:
 		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 8))
 
 	def getSamples(self, count):
-		print "Timer Running:", self.dev.ctrl_transfer(0x40|0x80, 0xC7, 1160, 0xFF, 1)[0]  
+		print "Timer Running:", self.dev.ctrl_transfer(0x40|0x80, 0xC7, 150, 0xFF, 1)[0]  
 		data = [self.getData() for i in range(count)]
 		print "Timer Running:", self.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
 		return data
