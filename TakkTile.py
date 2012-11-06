@@ -27,7 +27,7 @@ class TakkTile:
 		# populates bitmap of live sensors
 		self.alive = self.getAlive()
 		# calibrationCoefficients is a dictionary mapping cell index to a dictionary of calibration variables 
-		self.calibrationCoefficients = dict(zip(self.alive, [self.getCalibrationCoefficients(index) for index in self.alive]))
+		self.calibrationCoefficients = dict(map(self.getCalibrationCoefficients, self.alive))
 		# populate self.UID with vendor request to get the xmega's serialNumber
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
 			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
@@ -45,31 +45,29 @@ class TakkTile:
 	def getCalibrationCoefficients(self, index):
 		""" This function implements the compensation & calibration coefficient calculations from page 15 of AN3785. """
 		# get raw calibration data from a specified location
-		cd = self.getCalibrationData(index)  
+		cd = self.getCalibrationData(index) + [0, 0, 0, 0] 
 		cc = {"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}
 		# cell not alive
-		if max(cd) == 0:
-			return cc
-		# undo Two's complement if applicable, pack into proper bit width
-		cc["a0"] = _unTwos(((cd[0] << 8) | cd[1]), 16)
-		cc["b1"] = _unTwos(((cd[2] << 8) | cd[3]), 16)
-		cc["b2"] = _unTwos(((cd[4] << 8) | cd[5]), 16)
-		cc["c12"] = _unTwos(((cd[6] << 6) | (cd[7] >> 2)), 14)
-		cc["c11"] = _unTwos(((cd[8] << 3) | (cd[9] >> 5)), 11)
-		cc["c22"] = _unTwos(((cd[10] << 3) | (cd[11] >> 5)), 11)
-		# divide by float(1 << (fractionalBits + zeroPad)) to handle weirdness
-		cc["a0"] /= float(1 << 3)
-		cc["b1"] /= float(1 << 13)
-		cc["b2"] /= float(1 << 14)
-		cc["c12"] /= float(1 << 22)
-		cc["c11"] /= float(1 << 21)
-		cc["c22"] /= float(1 << 25)
-		return cc
-
+		if max(cd) != 0:
+			# undo Two's complement if applicable, pack into proper bit width
+			cc["a0"] = _unTwos(((cd[0] << 8) | cd[1]), 16)
+			cc["b1"] = _unTwos(((cd[2] << 8) | cd[3]), 16)
+			cc["b2"] = _unTwos(((cd[4] << 8) | cd[5]), 16)
+			cc["c12"] = _unTwos(((cd[6] << 6) | (cd[7] >> 2)), 14)
+			cc["c11"] = _unTwos(((cd[8] << 3) | (cd[9] >> 5)), 11)
+			cc["c22"] = _unTwos(((cd[10] << 3) | (cd[11] >> 5)), 11)
+			# divide by float(1 << (fractionalBits + zeroPad)) to handle weirdness
+			cc["a0"] /= float(1 << 3)
+			cc["b1"] /= float(1 << 13)
+			cc["b2"] /= float(1 << 14)
+			cc["c12"] /= float(1 << 22)
+			cc["c11"] /= float(1 << 21)
+			cc["c22"] /= float(1 << 25)
+		return (index, cc)
 
 	def getDataRaw(self):
 		"""Query the TakkTile USB interface for the pressure and temperature samples from a specified row of sensors.."""
-		data = self.dev.read(0x81, 360, 0, 100)
+		data = self.dev.read(0x81, 720, 0, 100)
 		try:
 			assert len(data) % 4 == 0
 			assert len(data)/4 == len(self.alive)
@@ -112,7 +110,13 @@ class TakkTile:
 		"""Request the 12 calibration bytes from a sensor at a specified index."""
 		# get the attiny's virtual address for the specified index 
 		# read the calibration data via vendor request and return it 
-		return self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 12)	
+		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 8))
+
+	def getSamples(self, count):
+		print "Timer Running:", self.dev.ctrl_transfer(0x40|0x80, 0xC7, 200, 0xFF, 1)[0]  
+		data = [self.getData() for i in range(count)]
+		print "Timer Running:", self.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
+		return data
 
 if __name__ == "__main__":
 	import sys, traceback 
@@ -120,16 +124,8 @@ if __name__ == "__main__":
 	print tact.alive
 	print tact.UID
 	print tact.calibrationCoefficients
-	print "Timer Running:", tact.dev.ctrl_transfer(0x40|0x80, 0xC7, 1200, 0xFF, 1)[0]  
 	import time
-	for i in range(10):
-		start = time.time()
-		try:
-			print tact.getData()
-		except:
-			exc_type, exc_value, exc_traceback = sys.exc_info()
-			traceback.print_exception(exc_type, exc_value, exc_traceback,
-                              limit=2, file=sys.stdout)
-		end = time.time()
-		print end-start
-	print "Timer Running:", tact.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
+	start = time.time()
+	print tact.getSamples(10)
+	end = time.time()
+	print (end-start)/10

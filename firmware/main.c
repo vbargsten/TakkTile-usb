@@ -104,13 +104,13 @@ void getCalibrationData(void){
 				// start read from MPL115A2
 				TWIC.MASTER.ADDR = 0xC1;
 				while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-				for (uint8_t byteCt = 0; byteCt < 12; byteCt++){
-					uint8_t index = 60*row+12*column+byteCt;
+				for (uint8_t byteCt = 0; byteCt < 8; byteCt++){
+					uint8_t index = 40*row+8*column+byteCt;
 					calibrationData[index] = TWIC.MASTER.DATA;
 					// if transaction isn't over, wait for ACK
-					if (byteCt < 11) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+					if (byteCt < 7) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 					// if transaction is almost over, set next byte to NACK
-					if (byteCt == 10) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+					if (byteCt == 6) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 				}
 				botherAddress(tinyAddr^1, 1);
 			}
@@ -302,9 +302,9 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				return true;
 
 			case 0x6C: {
-				uint8_t offset = 60*req->wIndex+12*req->wValue;
-				for (uint8_t i = 0; i < 12; i++) {ep0_buf_in[i] = calibrationData[offset+i];}
-				USB_ep0_send(12);
+				uint8_t offset = 40*req->wIndex+8*req->wValue;
+				for (uint8_t i = 0; i < 8; i++) {ep0_buf_in[i] = calibrationData[offset+i];}
+				USB_ep0_send(8);
 				return true;
 				}
 
