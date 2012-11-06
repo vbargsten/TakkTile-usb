@@ -31,6 +31,7 @@ class TakkTile:
 		# populate self.UID with vendor request to get the xmega's serialNumber
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
 			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
+		self.startSampling()
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
@@ -112,20 +113,20 @@ class TakkTile:
 		# read the calibration data via vendor request and return it 
 		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 8))
 
-	def getSamples(self, count):
+	def startSampling(self):
 		print "Timer Running:", self.dev.ctrl_transfer(0x40|0x80, 0xC7, 150, 0xFF, 1)[0]  
-		data = [self.getData() for i in range(count)]
+	def stopSampling(self):
 		print "Timer Running:", self.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
-		return data
 
 if __name__ == "__main__":
-	import sys, traceback 
+	import sys
 	tact = TakkTile()
 	print tact.alive
 	print tact.UID
-	print tact.calibrationCoefficients
 	import time
 	start = time.time()
-	print tact.getSamples(100)
+	for i in range(int(sys.argv[1])):
+		print tact.getData()
 	end = time.time()
-	print (end-start)/100
+	tact.stopSampling()
+	print (end-start)/int(sys.argv[1])
