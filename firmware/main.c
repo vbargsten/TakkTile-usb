@@ -14,7 +14,6 @@ ISR(TCC0_CCA_vect){
 	// Timer interrupt that trips 1ms after TCC0.CNT is set to 0.
 	// Change the LED state, clock out all data from all alive sensors, and start next conversion
 
-	PORTR.OUTTGL = 1 << 1;
 	getSensorData();
 
 	startConversion();
@@ -94,7 +93,8 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 					ep0_buf_in[0] = 1;
 					usb_pipe_reset(&ep_in);
 					timeout_or_sampling_no_longer_enabled = 0;
-					TCC0.CCA = req->wValue;}
+					TCC0.CCA = req->wValue;
+				}
 				else {
 					TCC0.PER = 0;
 					ep0_buf_in[0] = 0;
