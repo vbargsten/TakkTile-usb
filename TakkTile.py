@@ -88,6 +88,7 @@ class TakkTile:
 		"""Return measured pressure in kPa, temperature compensated and factory calibrated."""
 		# get raw 10b data
 		data = self.getDataRaw()
+		print 'self.getDataRaw():', data
 		# helper functions to increase readability
 		Padc = lambda cell: data[cell][0]
 		Tadc = lambda cell: data[cell][1]
