@@ -101,7 +101,7 @@ const USB_Descriptor_Configuration_t PROGMEM TakkTile_ConfigurationDescriptor =
 
 			.InterfaceStrIndex      = NO_DESCRIPTOR
 		},
-	.Test_DataInEndpoint =
+	.TakkTileInEndpoint =
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 
@@ -110,7 +110,7 @@ const USB_Descriptor_Configuration_t PROGMEM TakkTile_ConfigurationDescriptor =
 			.EndpointSize           = 64,
 			.PollingIntervalMS      = 0x00
 		},
-	.Test_DataOutEndpoint =
+	.TakkTileOutEndpoint =
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 

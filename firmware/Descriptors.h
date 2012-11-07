@@ -51,8 +51,8 @@
 			USB_Descriptor_Configuration_Header_t Config;
 			
 			USB_Descriptor_Interface_t            TakkTileInterface;
-			USB_Descriptor_Endpoint_t              Test_DataInEndpoint;
-			USB_Descriptor_Endpoint_t              Test_DataOutEndpoint;
+			USB_Descriptor_Endpoint_t              TakkTileInEndpoint;
+			USB_Descriptor_Endpoint_t              TakkTileOutEndpoint;
 		} USB_Descriptor_Configuration_t;
 
 	/* Function Prototypes: */
