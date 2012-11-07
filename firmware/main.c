@@ -18,7 +18,8 @@ USB_PIPE(ep_in, 0x81 | USB_EP_PP, USB_EP_TYPE_BULK_gc, 64, 512, 1, 0, PIPE_ENABL
 
 // Queue a byte to be sent over the bulk EP. Blocks if the buffer is full
 static inline void send_byte(uint8_t byte){
-	while (!usb_pipe_can_write(&ep_in, 1)); // This should never actually block if your buffer is big enough
+	// this should never actually block if your buffer is big enough	
+	while (!usb_pipe_can_write(&ep_in, 1)); 
 	pipe_write_byte(ep_in.pipe, byte);
 	USB.INTFLAGSBSET = USB_TRNIF_bm;
 }
@@ -42,7 +43,7 @@ inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row)&0x0F) 
 uint8_t botherAddress(uint8_t address, bool stop){
 	// Function to write address byte to I2C, returns 1 if ACK, 0 if NACK.
 	// 'stop' specifies an optional stop bit on the transaction.
-	// NB: Don't read from a non-existant address
+	// NB: Don't read from a non-existant address or the CPU will hang waiting for ACK
 
 	// quick command mode - RIF/WIF trips on ACK
 	TWIC.MASTER.CTRLB |= TWI_MASTER_QCEN_bm;
@@ -81,9 +82,6 @@ void getCalibrationData(void){
 	// Iterate through all rows and all columns. If that cell is alive,
 	// read 12 calibration bytes from 0x04 into calibrationData.
 	
-	// This could also easily be made to dump data over the bulk pipe with send_byte()
-	// on the host you would send the vReq, then do a bulk read for more than the max size, that would end with and synchronize on the break
-
 	for (uint8_t row = 0; row < 8; row++) {
 		for (uint8_t column = 0; column < 5; column++) {
 			TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
@@ -117,12 +115,11 @@ void getCalibrationData(void){
 			else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 		}
 	}
-	// break_and_flush()
 }
 
 void getSensorData(void){
 	/* Iterate through all rows and all columns. If that cell is alive,
-	read four data bytes from 0x00 into sensorData */
+	read four data bytes from memory address 0x00 into USB buffer via send_byte */
 
 	for (uint8_t row = 0; row < 8; row++) {
 		for (uint8_t column = 0; column < 5; column++) {
@@ -308,25 +305,14 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				USB_ep0_send(8);
 				return true;
 
+			// return calibration information
+			// mnemonic - 0x6etCalibration
 			case 0x6C: {
 				uint8_t offset = 40*req->wIndex+8*req->wValue;
 				for (uint8_t i = 0; i < 8; i++) {ep0_buf_in[i] = calibrationData[offset+i];}
 				USB_ep0_send(8);
 				return true;
 				}
-
-			// read EEPROM	
-			case 0xE0: 
-				eeprom_read_block(ep0_buf_in, (void*)(req->wIndex*64), 64);
-				USB_ep0_send(64);
-				return true;
-
-			// write EEPROM	
-			case 0xE1: 
-				usb_cmd = req->bRequest;
-				cmd_data = req->wIndex;
-				USB_ep0_send(0);
-				return true; // Wait for OUT data (expecting an OUT transfer)
 
 			// disconnect from USB, jump to bootloader	
 			case 0xBB: 
@@ -336,12 +322,3 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 	}
 	return false;
 }
-
-void EVENT_USB_Device_ControlOUT(uint8_t* buf, uint8_t count){
-	switch (usb_cmd){
-		case 0xE1: // Write EEPROM
-			eeprom_update_block(buf, (void*)(cmd_data*64), count);
-			break;
-	}
-}
-
