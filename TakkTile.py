@@ -114,19 +114,20 @@ class TakkTile:
 		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 8))
 
 	def startSampling(self):
-		print "Timer Running:", self.dev.ctrl_transfer(0x40|0x80, 0xC7, 150, 0xFF, 1)[0]  
+		return self.dev.ctrl_transfer(0x40|0x80, 0xC7, 150, 0xFF, 1)[0]  
+
 	def stopSampling(self):
-		print "Timer Running:", self.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
+		return self.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
 
 if __name__ == "__main__":
-	import sys
+	import sys, pprint
 	tact = TakkTile()
 	print tact.alive
 	print tact.UID
 	import time
 	start = time.time()
 	for i in range(int(sys.argv[1])):
-		print tact.getData()
+		pprint.pprint(tact.getData())
 	end = time.time()
 	tact.stopSampling()
 	print (end-start)/int(sys.argv[1])
