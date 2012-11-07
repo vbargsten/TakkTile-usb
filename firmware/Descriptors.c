@@ -43,7 +43,7 @@
  *  number of device configurations. The descriptor is read out by the USB host when the enumeration
  *  process begins.
  */
-const USB_Descriptor_Device_t PROGMEM XmegaExample_DeviceDescriptor =
+const USB_Descriptor_Device_t PROGMEM TakkTile_DeviceDescriptor =
 {
 	.Header                 = {.Size = sizeof(USB_Descriptor_Device_t), .Type = DTYPE_Device},
 
@@ -69,7 +69,7 @@ const USB_Descriptor_Device_t PROGMEM XmegaExample_DeviceDescriptor =
  *  and endpoints. The descriptor is read out by the USB host during the enumeration process when selecting
  *  a configuration so that the host may correctly communicate with the USB device.
  */
-const USB_Descriptor_Configuration_t PROGMEM XmegaExample_ConfigurationDescriptor =
+const USB_Descriptor_Configuration_t PROGMEM TakkTile_ConfigurationDescriptor =
 {
 	.Config =
 		{
@@ -86,7 +86,7 @@ const USB_Descriptor_Configuration_t PROGMEM XmegaExample_ConfigurationDescripto
 			.MaxPowerConsumption    = USB_CONFIG_POWER_MA(500)
 		},
 
-	.XmegaExampleInterface =
+	.TakkTileInterface =
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Interface_t), .Type = DTYPE_Interface},
 
@@ -125,7 +125,7 @@ const USB_Descriptor_Configuration_t PROGMEM XmegaExample_ConfigurationDescripto
  *  the string descriptor with index 0 (the first index). It is actually an array of 16-bit integers, which indicate
  *  via the language ID table available at USB.org what languages the device supports for its string descriptors.
  */
-const USB_Descriptor_String_t PROGMEM XmegaExample_LanguageString =
+const USB_Descriptor_String_t PROGMEM TakkTile_LanguageString =
 {
 	.Header                 = {.Size = USB_STRING_LEN(1), .Type = DTYPE_String},
 
@@ -136,7 +136,7 @@ const USB_Descriptor_String_t PROGMEM XmegaExample_LanguageString =
  *  form, and is read out upon request by the host when the appropriate string ID is requested, listed in the Device
  *  Descriptor.
  */
-const USB_Descriptor_String_t PROGMEM XmegaExample_ManufacturerString =
+const USB_Descriptor_String_t PROGMEM TakkTile_ManufacturerString =
 {
 	.Header                 = {.Size = USB_STRING_LEN(38), .Type = DTYPE_String},
 
@@ -147,7 +147,7 @@ const USB_Descriptor_String_t PROGMEM XmegaExample_ManufacturerString =
  *  and is read out upon request by the host when the appropriate string ID is requested, listed in the Device
  *  Descriptor.
  */
-const USB_Descriptor_String_t PROGMEM XmegaExample_ProductString =
+const USB_Descriptor_String_t PROGMEM TakkTile_ProductString =
 {
 	.Header                 = {.Size = USB_STRING_LEN(8), .Type = DTYPE_String},
 
@@ -174,27 +174,27 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 	switch (DescriptorType)
 	{
 		case DTYPE_Device:
-			Address = &XmegaExample_DeviceDescriptor;
+			Address = &TakkTile_DeviceDescriptor;
 			Size    = sizeof(USB_Descriptor_Device_t);
 			break;
 		case DTYPE_Configuration:
-			Address = &XmegaExample_ConfigurationDescriptor;
+			Address = &TakkTile_ConfigurationDescriptor;
 			Size    = sizeof(USB_Descriptor_Configuration_t);
 			break;
 		case DTYPE_String:
 			switch (DescriptorNumber)
 			{
 				case 0x00:
-					Address = &XmegaExample_LanguageString;
-					Size    = pgm_read_byte(&XmegaExample_LanguageString.Header.Size);
+					Address = &TakkTile_LanguageString;
+					Size    = pgm_read_byte(&TakkTile_LanguageString.Header.Size);
 					break;
 				case 0x01:
-					Address = &XmegaExample_ManufacturerString;
-					Size    = pgm_read_byte(&XmegaExample_ManufacturerString.Header.Size);
+					Address = &TakkTile_ManufacturerString;
+					Size    = pgm_read_byte(&TakkTile_ManufacturerString.Header.Size);
 					break;
 				case 0x02:
-					Address = &XmegaExample_ProductString;
-					Size    = pgm_read_byte(&XmegaExample_ProductString.Header.Size);
+					Address = &TakkTile_ProductString;
+					Size    = pgm_read_byte(&TakkTile_ProductString.Header.Size);
 					break;
 			}
 
