@@ -5,7 +5,7 @@
 
 #include "TakkTile.h"
 
-inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row + 1)&0x0F) << 4 | (column&0x07) << 1); }
+inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row)&0x0F) << 4 | (column&0x07) << 1); }
 
 uint8_t botherAddress(uint8_t address, bool stop){
 	// Function to write address byte to I2C, returns 1 if ACK, 0 if NACK.
