@@ -138,9 +138,9 @@ const USB_Descriptor_String_t PROGMEM TakkTile_LanguageString =
  */
 const USB_Descriptor_String_t PROGMEM TakkTile_ManufacturerString =
 {
-	.Header                 = {.Size = USB_STRING_LEN(38), .Type = DTYPE_String},
+	.Header                 = {.Size = USB_STRING_LEN(20), .Type = DTYPE_String},
 
-	.UnicodeString          = L"The Biorobotics Lab and Nonolith Labs"
+	.UnicodeString          = L"The Biorobotics Lab"
 };
 
 /** Product descriptor string. This is a Unicode string containing the product's details in human readable form,
