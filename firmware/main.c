@@ -21,6 +21,9 @@ ISR(TCC0_CCA_vect){
 }
 
 int main(void){
+
+	_delay_ms(10);
+
 	USB_ConfigureClock();
 	PORTR.DIRSET = 1 << 1;
 	USB_Init();
