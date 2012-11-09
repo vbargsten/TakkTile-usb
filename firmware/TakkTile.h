@@ -37,7 +37,6 @@ static inline void break_and_flush(){
 
 
 void EVENT_USB_Device_ConfigurationChanged(uint8_t config){
-	PORTR.OUTSET = 1 << 1;	
 	usb_pipe_init(&ep_in);
 }
 
