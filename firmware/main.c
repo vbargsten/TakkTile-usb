@@ -48,6 +48,7 @@ int main(void){
 	getAlive();
 	getCalibrationData();
 
+	PORTR.OUTSET = 1 << 1;
 	for (;;){}
 }
 
