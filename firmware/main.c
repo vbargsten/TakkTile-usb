@@ -22,7 +22,7 @@ ISR(TCC0_CCA_vect){
 
 int main(void){
 
-	_delay_ms(10);
+	_delay_ms(100);
 
 	USB_ConfigureClock();
 	PORTR.DIRSET = 1 << 1;
@@ -111,6 +111,8 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// return a bitmap of alive cells 
 			// mnemonic - 0x5Can
 			case 0x5C: 
+				getAlive();
+				_delay_ms(5);
 				for (uint8_t i = 0; i < 8; i++) {ep0_buf_in[i] = bitmap[i];}
 				USB_ep0_send(8);
 				return true;
@@ -118,6 +120,8 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// return calibration information
 			// mnemonic - 0x6etCalibration
 			case 0x6C: {
+				getCalibrationData();
+				_delay_ms(5);
 				uint8_t offset = 40*req->wIndex+8*req->wValue;
 				for (uint8_t i = 0; i < 8; i++) {ep0_buf_in[i] = calibrationData[offset+i];}
 				USB_ep0_send(8);
