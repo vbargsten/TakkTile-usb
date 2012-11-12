@@ -6,27 +6,26 @@
 #include <util/delay.h>
 #include "Descriptors.h"
 #include "usb/usb.h"
+#include "usb/usb_pipe.h"
 #include <avr/eeprom.h>
-#include "usb_pipe.h"
 #include <avr/io.h>
 
 bool timeout_or_sampling_no_longer_enabled = 0;
 
-USB_PIPE(ep_in, 0x81 | USB_EP_PP, USB_EP_TYPE_BULK_gc, 64, 512, 1, 0, PIPE_ENABLE_FLUSH);
+USB_PIPE(ep_in, 0x81 | USB_EP_PP, USB_EP_TYPE_BULK_gc, 64, 8, PIPE_ENABLE_FLUSH);
 
 // Queue a byte to be sent over the bulk EP. Blocks if the buffer is full
 static inline void send_byte(uint8_t byte){
     // this should never actually block if your buffer is big enough
-    while (!usb_pipe_can_write(&ep_in, 1));
-    pipe_write_byte(ep_in.pipe, byte);
-    USB.INTFLAGSBSET = USB_TRNIF_bm;
+    while (!usb_pipe_can_write(&ep_in));
+	usb_pipe_write_byte(&ep_in, byte);
 }
 
 // Sends a break to end the USB read and flushes the USB pipe
 static inline void break_and_flush(){
     usb_pipe_flush(&ep_in);
     USB.INTFLAGSBSET = USB_TRNIF_bm;
-    while (!usb_pipe_can_write(&ep_in, 1)){
+    while (!usb_pipe_can_write(&ep_in)){
         if (timeout_or_sampling_no_longer_enabled){
             usb_pipe_reset(&ep_in);
             return;
