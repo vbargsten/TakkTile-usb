@@ -2,13 +2,14 @@
 
 This "HowTo" assumes you're running a modern version of the Ubuntu Linux distribution. Ubuntu has a low barrier to entry and provides a rock-solid development environment.
 
-* Get the AVR compiler toolchain. Note, avr-libc v1.7 is broken. Please follow the directions below to get avr-libc v1.8 from the Nonolith Labs PPA or get it from [upstream](http://download.savannah.gnu.org/releases/avr-libc/).
+* Get the AVR compiler toolchain. Note that the version included in most distributions' repositories is out of date and does not support Atmel's latest XMEGA parts.
 
- > sudo add-apt-repository ppa:nonolith/devtools
-
+ > sudo apt-get remove binutils-avr gcc-avr avr-libc
+ > sudo add-apt-repository ppa:nonolith/avr-toolchain
  > sudo apt-get update
-
- > sudo apt-get install gcc-avr avr-libc gcc-avr binutils-avr avr-libc avrdude git
+ > sudo apt-get install atmel-toolchain-binutils-avr atmel-toolchain-gcc-avr atmel-toolchain-avr-libc
+ 
+The PPA through which these tools are available is maintained by Nonolith Labs: http://www.nonolithlabs.com
 
 * Get the code.
 
@@ -28,4 +29,3 @@ This "HowTo" assumes you're running a modern version of the Ubuntu Linux distrib
 To get a single set of calibrated, compensated samples from the first row of the board, simply run
 
  > sudo python TakkTile.py
-
