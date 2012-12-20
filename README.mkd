@@ -5,8 +5,11 @@ This "HowTo" assumes you're running a modern version of the Ubuntu Linux distrib
 * Get the AVR compiler toolchain. Note that the version included in most distributions' repositories is out of date and does not support Atmel's latest XMEGA parts.
 
  > sudo apt-get remove binutils-avr gcc-avr avr-libc
+ 
  > sudo add-apt-repository ppa:nonolith/avr-toolchain
+
  > sudo apt-get update
+
  > sudo apt-get install atmel-toolchain-binutils-avr atmel-toolchain-gcc-avr atmel-toolchain-avr-libc
  
 The PPA through which these tools are available is maintained by Nonolith Labs: http://www.nonolithlabs.com
