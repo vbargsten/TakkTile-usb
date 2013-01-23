@@ -24,7 +24,21 @@ The PPA through which these tools are available is maintained by Nonolith Labs: 
 
 * With an [AVRISP-mkII](http://www.digikey.com/product-search/en/programmers-development-systems/in-circuit-programmers-emulators-and-debuggers/2621880?k=avrisp) programmer attached to the XMEGA on the board, install the bootloader and upload the firmware.
 
- > cd ../;sudo make bootload
+ > cd usb
+
+ > git checkout master
+
+ > cd bootloader
+
+ > sudo make program
+
+ > cd ../
+
+ > git checkout pipe_refactor
+
+ > cd ../
+
+ > make update
 
 
 ### Use
