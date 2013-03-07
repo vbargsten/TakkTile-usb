@@ -15,7 +15,9 @@ ISR(TCC0_CCA_vect){
 	// Change the LED state, clock out all data from all alive sensors, and start next conversion
 
 	getSensorData();
-
+	DMA.CH0.TRFCNT = 160;
+	DMA.CH0.CTRLA |= DMA_CH_ENABLE_bm;
+	DMA.CH0.CTRLA |= DMA_CH_TRFREQ_bm;
 	startConversion();
 	TCC0.CNT = 0;
 }
@@ -44,6 +46,23 @@ int main(void){
 	TCC0.INTCTRLB = TC_CCAINTLVL_LO_gc;
 	TCC0.CCA = 120; 
 	TCC0.PER = 0;
+
+	PORTE.DIRSET = 1 << 3;
+	USARTE0.BAUDCTRLA = 0x01;
+	USARTE0.CTRLC =  USART_PMODE_EVEN_gc | USART_CHSIZE_8BIT_gc;
+	USARTE0.CTRLB = USART_TXEN_bm | USART_CLK2X_bm;
+
+	DMA.CTRL = DMA_ENABLE_bm | DMA_DBUFMODE_DISABLED_gc | DMA_PRIMODE_RR0123_gc;
+
+	DMA.CH0.ADDRCTRL = DMA_CH_SRCRELOAD_TRANSACTION_gc | DMA_CH_SRCDIR_INC_gc | DMA_CH_DESTRELOAD_NONE_gc | DMA_CH_DESTDIR_FIXED_gc;
+	DMA.CH0.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_DRE_gc;
+	DMA.CH0.SRCADDR0 = ((uint32_t)(&sensorData) >> (8*0)) & 0xFF;
+	DMA.CH0.SRCADDR1 = ((uint32_t)(&sensorData) >> (8*1)) & 0xFF;
+	DMA.CH0.SRCADDR2 = ((uint32_t)(&sensorData) >> (8*2)) & 0xFF;
+	DMA.CH0.DESTADDR0 = ((uint32_t)(&USARTE0.DATA) >> (8*0)) & 0xFF;
+	DMA.CH0.DESTADDR1 = ((uint32_t)(&USARTE0.DATA) >> (8*1)) & 0xFF;
+	DMA.CH0.DESTADDR2 = ((uint32_t)(&USARTE0.DATA) >> (8*2)) & 0xFF;
+	DMA.CH0.CTRLA = DMA_CH_ENABLE_bm | DMA_CH_SINGLE_bm | DMA_CH_BURSTLEN_1BYTE_gc; 
 
 	getAlive();
 	getCalibrationData();

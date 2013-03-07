@@ -87,7 +87,7 @@ void getCalibrationData(void){
 void getSensorData(void){
 	/* Iterate through all rows and all columns. If that cell is alive,
 	read four data bytes from memory address 0x00 into USB buffer via send_byte */
-
+	uint8_t datum = 0x00;
 	for (uint8_t row = 0; row < 8; row++) {
 		for (uint8_t column = 0; column < 5; column++) {
 			TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
@@ -110,7 +110,9 @@ void getSensorData(void){
 				while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 				// clock out four bytes
 				for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
-					send_byte(TWIC.MASTER.DATA);
+					datum = TWIC.MASTER.DATA;
+					send_byte(datum);
+					sensorData[(row*5 + column)*4 + byteCt] = datum;
 					// if transaction isn't over, wait for ACK
 					if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 					// if transaction is almost over, set next byte to NACK
