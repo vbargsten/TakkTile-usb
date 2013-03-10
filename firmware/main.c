@@ -15,10 +15,16 @@ ISR(TCC0_CCA_vect){
 	// Change the LED state, clock out all data from all alive sensors, and start next conversion
 
 	getSensorData();
+
+	// start DMA copy from buffer to USART on PORTE
 	DMA.CH0.TRFCNT = 160;
 	DMA.CH0.CTRLA |= DMA_CH_ENABLE_bm;
 	DMA.CH0.CTRLA |= DMA_CH_TRFREQ_bm;
+
+	// start conversion of next block
 	startConversion();
+
+	// reset timer
 	TCC0.CNT = 0;
 }
 
@@ -37,31 +43,44 @@ int main(void){
 	PMIC.CTRL = PMIC_LOLVLEN_bm | PMIC_MEDLVLEN_bm;
 	sei(); 
 
+	// setup TWI bus for master-mode I2C comms
 	TWIC.MASTER.BAUD = TWI_BAUD;
 	TWIC.MASTER.CTRLA = TWI_MASTER_ENABLE_bm;  
 	TWIC.MASTER.STATUS = TWI_MASTER_BUSSTATE_IDLE_gc;
 
+	// setup TCC0 for sample timing
 	TCC0.CTRLA = TC_CLKSEL_DIV256_gc;
 	TCC0.CTRLB = TC0_CCAEN_bm | TC_WGMODE_SINGLESLOPE_gc;
 	TCC0.INTCTRLB = TC_CCAINTLVL_LO_gc;
 	TCC0.CCA = 120; 
 	TCC0.PER = 0;
 
+	// config PORTE for serial transmission
 	PORTE.DIRSET = 1 << 3;
 	USARTE0.BAUDCTRLA = 0x01;
 	USARTE0.CTRLC =  USART_PMODE_EVEN_gc | USART_CHSIZE_8BIT_gc;
 	USARTE0.CTRLB = USART_TXEN_bm | USART_CLK2X_bm;
 
+	// configure general DMA settings
 	DMA.CTRL = DMA_ENABLE_bm | DMA_DBUFMODE_DISABLED_gc | DMA_PRIMODE_RR0123_gc;
 
+	// use DMA CH0 for transmitting data after a frame snapshot
+
+	// reload SRC address register every transaction
+	// increment SRC every packet
+	// don't reload the destination address
+	// the destination address is fixed
 	DMA.CH0.ADDRCTRL = DMA_CH_SRCRELOAD_TRANSACTION_gc | DMA_CH_SRCDIR_INC_gc | DMA_CH_DESTRELOAD_NONE_gc | DMA_CH_DESTDIR_FIXED_gc;
+	// trigger DMA transfer on data ready event - USARTE0.DATA is ready to get another byte
 	DMA.CH0.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_DRE_gc;
+	// eww.
 	DMA.CH0.SRCADDR0 = ((uint32_t)(&sensorData) >> (8*0)) & 0xFF;
 	DMA.CH0.SRCADDR1 = ((uint32_t)(&sensorData) >> (8*1)) & 0xFF;
 	DMA.CH0.SRCADDR2 = ((uint32_t)(&sensorData) >> (8*2)) & 0xFF;
 	DMA.CH0.DESTADDR0 = ((uint32_t)(&USARTE0.DATA) >> (8*0)) & 0xFF;
 	DMA.CH0.DESTADDR1 = ((uint32_t)(&USARTE0.DATA) >> (8*1)) & 0xFF;
 	DMA.CH0.DESTADDR2 = ((uint32_t)(&USARTE0.DATA) >> (8*2)) & 0xFF;
+	// enable CH0, set to one byte bursts
 	DMA.CH0.CTRLA = DMA_CH_ENABLE_bm | DMA_CH_SINGLE_bm | DMA_CH_BURSTLEN_1BYTE_gc; 
 
 	getAlive();
