@@ -20,6 +20,10 @@ ISR(TCC0_CCA_vect){
 	DMA.CH0.TRFCNT = 160;
 	DMA.CH0.CTRLA |= DMA_CH_ENABLE_bm;
 	DMA.CH0.CTRLA |= DMA_CH_TRFREQ_bm;
+	// start DMA copy from USART to buffer on PORTE
+	DMA.CH1.TRFCNT = 160;
+	DMA.CH1.CTRLA |= DMA_CH_ENABLE_bm;
+	DMA.CH1.CTRLA |= DMA_CH_TRFREQ_bm;
 
 	// start conversion of next block
 	startConversion();
@@ -56,10 +60,14 @@ int main(void){
 	TCC0.PER = 0;
 
 	// config PORTE for serial transmission
+	// TX as output
 	PORTE.DIRSET = 1 << 3;
+	// don't divide
 	USARTE0.BAUDCTRLA = 0x01;
+	// use even parity bits, 8b words
 	USARTE0.CTRLC =  USART_PMODE_EVEN_gc | USART_CHSIZE_8BIT_gc;
-	USARTE0.CTRLB = USART_TXEN_bm | USART_CLK2X_bm;
+	// enable TX and RX and double the default clock to 2mbaud
+	USARTE0.CTRLB = USART_TXEN_bm | USART_RXEN_bm | USART_CLK2X_bm;
 
 	// configure general DMA settings
 	DMA.CTRL = DMA_ENABLE_bm | DMA_DBUFMODE_DISABLED_gc | DMA_PRIMODE_RR0123_gc;
@@ -71,8 +79,10 @@ int main(void){
 	// don't reload the destination address
 	// the destination address is fixed
 	DMA.CH0.ADDRCTRL = DMA_CH_SRCRELOAD_TRANSACTION_gc | DMA_CH_SRCDIR_INC_gc | DMA_CH_DESTRELOAD_NONE_gc | DMA_CH_DESTDIR_FIXED_gc;
+	DMA.CH1.ADDRCTRL = DMA_CH_SRCRELOAD_NONE_gc | DMA_CH_SRCDIR_FIXED_gc | DMA_CH_DESTRELOAD_TRANSACTION_gc | DMA_CH_DESTDIR_INC_gc;
 	// trigger DMA transfer on data ready event - USARTE0.DATA is ready to get another byte
 	DMA.CH0.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_DRE_gc;
+	DMA.CH1.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_RXC_gc;
 	// eww.
 	DMA.CH0.SRCADDR0 = ((uint32_t)(&sensorData) >> (8*0)) & 0xFF;
 	DMA.CH0.SRCADDR1 = ((uint32_t)(&sensorData) >> (8*1)) & 0xFF;
@@ -80,6 +90,13 @@ int main(void){
 	DMA.CH0.DESTADDR0 = ((uint32_t)(&USARTE0.DATA) >> (8*0)) & 0xFF;
 	DMA.CH0.DESTADDR1 = ((uint32_t)(&USARTE0.DATA) >> (8*1)) & 0xFF;
 	DMA.CH0.DESTADDR2 = ((uint32_t)(&USARTE0.DATA) >> (8*2)) & 0xFF;
+	// eww.
+	DMA.CH0.SRCADDR0 = ((uint32_t)(&USARTE0.DATA) >> (8*0)) & 0xFF;
+	DMA.CH0.SRCADDR1 = ((uint32_t)(&USARTE0.DATA) >> (8*1)) & 0xFF;
+	DMA.CH0.SRCADDR2 = ((uint32_t)(&USARTE0.DATA) >> (8*2)) & 0xFF;
+	DMA.CH0.DESTADDR0 = ((uint32_t)(&sensorDataPrime) >> (8*0)) & 0xFF;
+	DMA.CH0.DESTADDR1 = ((uint32_t)(&sensorDataPrime) >> (8*1)) & 0xFF;
+	DMA.CH0.DESTADDR2 = ((uint32_t)(&sensorDataPrime) >> (8*2)) & 0xFF;
 	// enable CH0, set to one byte bursts
 	DMA.CH0.CTRLA = DMA_CH_ENABLE_bm | DMA_CH_SINGLE_bm | DMA_CH_BURSTLEN_1BYTE_gc; 
 
