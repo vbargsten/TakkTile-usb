@@ -31,7 +31,6 @@ class TakkTile:
 		# populate self.UID with vendor request to get the xmega's serialNumber
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
 			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
-		self.startSampling()
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
@@ -88,7 +87,7 @@ class TakkTile:
 		"""Return measured pressure in kPa, temperature compensated and factory calibrated."""
 		# get raw 10b data
 		data = self.getDataRaw()
-		print 'self.getDataRaw():', data
+		#print 'self.getDataRaw():', data
 		# helper functions to increase readability
 		Padc = lambda cell: data[cell][0]
 		Tadc = lambda cell: data[cell][1]
@@ -130,6 +129,7 @@ if __name__ == "__main__":
 	except:
 		count = 2
 	import time
+	tact.startSampling()
 	start = time.time()
 	for i in range(count):
 		print(tact.getData())

@@ -71,8 +71,10 @@ int main(void){
 	// don't reload the destination address
 	// the destination address is fixed
 	DMA.CH0.ADDRCTRL = DMA_CH_SRCRELOAD_TRANSACTION_gc | DMA_CH_SRCDIR_INC_gc | DMA_CH_DESTRELOAD_NONE_gc | DMA_CH_DESTDIR_FIXED_gc;
+//	DMA.CH1.ADDRCTRL = DMA_CH_SRCRELOAD_NONE_gc | DMA_CH_SRCDIR_FIXED_gc | DMA_CH_DESTRELOAD_TRANSACTION_gc | DMA_CH_DESTDIR_INC_gc;
 	// trigger DMA transfer on data ready event - USARTE0.DATA is ready to get another byte
 	DMA.CH0.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_DRE_gc;
+//	DMA.CH1.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_RXC_gc;
 	// eww.
 	DMA.CH0.SRCADDR0 = ((uint32_t)(&sensorData) >> (8*0)) & 0xFF;
 	DMA.CH0.SRCADDR1 = ((uint32_t)(&sensorData) >> (8*1)) & 0xFF;
@@ -129,18 +131,17 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// start sampling
 			// mnemonic - 0xConfigure7imer
 			case 0xC7:
+				usb_pipe_reset(&ep_in);
 				if (req->wIndex != 0) {
-					TCC0.PER = 1 << 15;
 					startConversion();
 					ep0_buf_in[0] = 1;
-					usb_pipe_reset(&ep_in);
 					timeout_or_sampling_no_longer_enabled = 0;
 					TCC0.CCA = req->wValue;
+					TCC0.PER = 1 << 15;
 				}
 				else {
 					TCC0.PER = 0;
 					ep0_buf_in[0] = 0;
-					usb_pipe_reset(&ep_in);
 					timeout_or_sampling_no_longer_enabled = 1;
 				}
 				TCC0.CNT = 0;
