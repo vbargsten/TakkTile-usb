@@ -77,8 +77,8 @@ class TakkTile:
 		data = _chunk(data, 4)
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
-		temperature = [_unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data if datum.count(0) != 4]
-		pressure = [_unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data if datum.count(0) != 4]
+		temperature = [datum[3] >> 6| datum[2] << 2 for datum in data if datum.count(0) != 4]
+		pressure = [datum[1] >> 6| datum[0] << 2 for datum in data if datum.count(0) != 4]
 		pressure = map(abs, pressure)
 		temperature = map(abs, temperature)
 		# return a dictionary mapping sensor indexes to a tuple containing (pressure, temperature)
@@ -115,7 +115,7 @@ class TakkTile:
 		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 8))
 
 	def startSampling(self):
-		return self.dev.ctrl_transfer(0x40|0x80, 0xC7, 100, 0xFF, 1)[0]  
+		return self.dev.ctrl_transfer(0x40|0x80, 0xC7, 500, 0xFF, 1)[0]  
 
 	def stopSampling(self):
 		return self.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
