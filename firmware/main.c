@@ -21,9 +21,9 @@ ISR(TCC0_CCA_vect){
 	DMA.CH0.CTRLA |= DMA_CH_ENABLE_bm;
 	DMA.CH0.CTRLA |= DMA_CH_TRFREQ_bm;
 	// start DMA copy from USART to buffer on PORTE
-	DMA.CH1.TRFCNT = 160;
-	DMA.CH1.CTRLA |= DMA_CH_ENABLE_bm;
-	DMA.CH1.CTRLA |= DMA_CH_TRFREQ_bm;
+	//DMA.CH1.TRFCNT = 160;
+	//DMA.CH1.CTRLA |= DMA_CH_ENABLE_bm;
+	//DMA.CH1.CTRLA |= DMA_CH_TRFREQ_bm;
 
 	// start conversion of next block
 	startConversion();
