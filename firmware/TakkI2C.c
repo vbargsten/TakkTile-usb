@@ -129,13 +129,12 @@ void getSensorData(void){
 
 void getAlive(void){
 	/* Iterate through rows and columns, generating a bitmap of alive sensors. */
-
+	_delay_ms(1);
 	for (uint8_t row = 0; row < 8; row++) {
 		uint8_t sensor_bm = 0;
 		for (uint8_t column = 0; column < 5; column++) {
 			// attiny address formula
 			uint8_t tinyAddr = calcTinyAddr(row, column); 
-			_delay_us(5);
 			// if the write address ACKs....
 			if (botherAddress(tinyAddr, 1) == 1) {
 				_delay_us(5);
@@ -144,6 +143,7 @@ void getAlive(void){
 				// then turn off the sensor with an address LSB of 1
 				_delay_us(5);
 				botherAddress(tinyAddr^1, 1);
+				_delay_us(5);
 			}
 		bitmap[row] = sensor_bm; 
 		}
