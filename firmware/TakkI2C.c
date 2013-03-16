@@ -135,11 +135,14 @@ void getAlive(void){
 		for (uint8_t column = 0; column < 5; column++) {
 			// attiny address formula
 			uint8_t tinyAddr = calcTinyAddr(row, column); 
+			_delay_us(5);
 			// if the write address ACKs....
 			if (botherAddress(tinyAddr, 1) == 1) {
+				_delay_us(5);
 				// ping the MPL115A2
 				if ( botherAddress(0xC0, 1) == 1 ) sensor_bm |= 1 << column;
 				// then turn off the sensor with an address LSB of 1
+				_delay_us(5);
 				botherAddress(tinyAddr^1, 1);
 			}
 		bitmap[row] = sensor_bm; 
