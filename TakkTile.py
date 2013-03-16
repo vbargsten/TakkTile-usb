@@ -31,7 +31,6 @@ class TakkTile:
 		# populate self.UID with vendor request to get the xmega's serialNumber
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
 			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
-		self.startSampling()
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
@@ -123,13 +122,18 @@ class TakkTile:
 if __name__ == "__main__":
 	import sys, pprint
 	tact = TakkTile()
-	print tact.alive
+	print tact.getAlive()
+	print tact.getAlive()
+	print tact.getAlive()
+	print tact.getAlive()
+	print tact.getAlive()
 	print tact.UID
 	try:
 		count = int(sys.argv[1])
 	except:
 		count = 2
 	import time
+	tact.startSampling()
 	start = time.time()
 	for i in range(count):
 		print(tact.getData())
