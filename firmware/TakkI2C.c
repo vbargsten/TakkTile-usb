@@ -29,6 +29,8 @@ uint8_t botherAddress(uint8_t address, bool stop){
 inline void startConversion(){
 	// Initiates the analog-to-digital conversion of pressure and temperature
 	// on all MPL115A2 sensors on all attached rows.
+		
+	if (MASTER) PORTE.OUTSET = 1 << 1;
 
 	// enable all MPL115A2 by writing to 0x0C
 	uint8_t ACK = botherAddress(calcTinyAddr(0, 6), 1);
@@ -43,6 +45,9 @@ inline void startConversion(){
 	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	// if you got an ACK on enable, disable all the MPL115A2s
 	if (ACK == 1) botherAddress(calcTinyAddr(0, 6)^1, 1);
+
+	if (MASTER) PORTE.OUTCLR = 1 << 1;
+
 }
 
 void getCalibrationData(void){
@@ -86,7 +91,9 @@ void getCalibrationData(void){
 
 void getSensorData(void){
 	/* Iterate through all rows and all columns. If that cell is alive,
-	read four data bytes from memory address 0x00 into USB buffer via send_byte */
+	read four data bytes from memory address 0x00 into sensorData buffer.
+	If SLAVE, send sensorData buffer via DMA.
+	If MASTER, send sensorData and sensorDataPrime via USB. */
 	uint8_t datum = 0x00;
 	for (uint8_t row = 0; row < 8; row++) {
 		for (uint8_t column = 0; column < 5; column++) {
@@ -111,7 +118,6 @@ void getSensorData(void){
 				// clock out four bytes
 				for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
 					datum = TWIC.MASTER.DATA;
-					send_byte(datum);
 					sensorData[(row*5 + column)*4 + byteCt] = datum;
 					// if transaction isn't over, wait for ACK
 					if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
@@ -123,7 +129,15 @@ void getSensorData(void){
 			else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 		}
 	}
-	break_and_flush();
+	if (MASTER) {
+		for (uint8_t i = 0; i < 160; i++) send_byte(sensorData[i]);
+		for (uint8_t i = 0; i < 160; i++) send_byte(sensorDataPrime[i]);
+		break_and_flush();
+	}
+	if (SLAVE) {
+		DMA.CH0.TRFCNT = 160;
+		DMA.CH0.CTRLA |= DMA_CH_ENABLE_bm | DMA_CH_TRFREQ_bm;
+	}
 }
 
 

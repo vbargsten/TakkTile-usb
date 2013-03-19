@@ -12,18 +12,9 @@
 
 ISR(TCC0_CCA_vect){
 	// Timer interrupt that trips 1ms after TCC0.CNT is set to 0.
-	// Change the LED state, clock out all data from all alive sensors, and start next conversion
+	// Clock out all data from all alive sensors, and start next conversion
 
 	getSensorData();
-
-	// start DMA copy from buffer to USART on PORTE
-	DMA.CH0.TRFCNT = 160;
-	DMA.CH0.CTRLA |= DMA_CH_ENABLE_bm;
-	DMA.CH0.CTRLA |= DMA_CH_TRFREQ_bm;
-	// start DMA copy from USART to buffer on PORTE
-	//DMA.CH1.TRFCNT = 160;
-	//DMA.CH1.CTRLA |= DMA_CH_ENABLE_bm;
-	//DMA.CH1.CTRLA |= DMA_CH_TRFREQ_bm;
 
 	// start conversion of next block
 	startConversion();
@@ -33,16 +24,27 @@ ISR(TCC0_CCA_vect){
 }
 
 int main(void){
-
+	PORTR.DIRSET = 1 << 1;
+	PORTR.OUTSET = 1 << 1;
+	_delay_ms(5);
+	PORTR.OUTCLR = 1 << 1;
 	_delay_ms(100);
 
 	USB_ConfigureClock();
-	PORTR.DIRSET = 1 << 1;
-	USB_Init();
+
+	// master-detect
+	PORTE.DIRCLR = 1 << 0;
+	// PE0 is daisy-chaining configuration pin
+//	if (PORTE.OUT & 1 << 0) { MASTER = 1; SLAVE = 0; }
+
+	if (MASTER) {
+		USB_Init();
+		
+		// Enable USB interrupts
+		USB.INTCTRLA = USB_BUSEVIE_bm | USB_INTLVL_MED_gc;
+		USB.INTCTRLB = USB_TRNIE_bm | USB_SETUPIE_bm;
 	
-	// Enable USB interrupts
-	USB.INTCTRLA = USB_BUSEVIE_bm | USB_INTLVL_MED_gc;
-	USB.INTCTRLB = USB_TRNIE_bm | USB_SETUPIE_bm;
+	}
 
 	PMIC.CTRL = PMIC_LOLVLEN_bm | PMIC_MEDLVLEN_bm;
 	sei(); 
@@ -59,49 +61,47 @@ int main(void){
 	TCC0.CCA = 120; 
 	TCC0.PER = 0;
 
-	// config PORTE for serial transmission
-	// TX as output
+	// config PORTE.USARTE0 for serial transmission as 2e6 8 1 n
 	PORTE.DIRSET = 1 << 3;
-	// don't divide
-	USARTE0.BAUDCTRLA = 0x01;
-	// use even parity bits, 8b words
-	USARTE0.CTRLC =  USART_PMODE_EVEN_gc | USART_CHSIZE_8BIT_gc;
-	// enable TX and RX and double the default clock to 2mbaud
-	USARTE0.CTRLB = USART_TXEN_bm | USART_RXEN_bm | USART_CLK2X_bm;
+	PORTE.DIRCLR = 1 << 2;
+	USARTE0.BAUDCTRLA = 0;
+	USARTE0.BAUDCTRLB = 0;
+	USARTE0.CTRLC =  USART_PMODE_DISABLED_gc | USART_CHSIZE_8BIT_gc;
+	if (MASTER) USARTE0.CTRLB = USART_RXEN_bm;
+	if (SLAVE) USARTE0.CTRLB = USART_TXEN_bm;
 
 	// configure general DMA settings
 	DMA.CTRL = DMA_ENABLE_bm | DMA_DBUFMODE_DISABLED_gc | DMA_PRIMODE_RR0123_gc;
 
-	// use DMA CH0 for transmitting data after a frame snapshot
-
-	// reload SRC address register every transaction
-	// increment SRC every packet
-	// don't reload the destination address
-	// the destination address is fixed
+	if (MASTER) {
 	DMA.CH0.ADDRCTRL = DMA_CH_SRCRELOAD_TRANSACTION_gc | DMA_CH_SRCDIR_INC_gc | DMA_CH_DESTRELOAD_NONE_gc | DMA_CH_DESTDIR_FIXED_gc;
-	DMA.CH1.ADDRCTRL = DMA_CH_SRCRELOAD_NONE_gc | DMA_CH_SRCDIR_FIXED_gc | DMA_CH_DESTRELOAD_TRANSACTION_gc | DMA_CH_DESTDIR_INC_gc;
-	// trigger DMA transfer on data ready event - USARTE0.DATA is ready to get another byte
 	DMA.CH0.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_DRE_gc;
-	DMA.CH1.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_RXC_gc;
-	// eww.
 	DMA.CH0.SRCADDR0 = ((uint32_t)(&sensorData) >> (8*0)) & 0xFF;
 	DMA.CH0.SRCADDR1 = ((uint32_t)(&sensorData) >> (8*1)) & 0xFF;
 	DMA.CH0.SRCADDR2 = ((uint32_t)(&sensorData) >> (8*2)) & 0xFF;
 	DMA.CH0.DESTADDR0 = ((uint32_t)(&USARTE0.DATA) >> (8*0)) & 0xFF;
 	DMA.CH0.DESTADDR1 = ((uint32_t)(&USARTE0.DATA) >> (8*1)) & 0xFF;
 	DMA.CH0.DESTADDR2 = ((uint32_t)(&USARTE0.DATA) >> (8*2)) & 0xFF;
-	// eww.
-	DMA.CH0.SRCADDR0 = ((uint32_t)(&USARTE0.DATA) >> (8*0)) & 0xFF;
-	DMA.CH0.SRCADDR1 = ((uint32_t)(&USARTE0.DATA) >> (8*1)) & 0xFF;
-	DMA.CH0.SRCADDR2 = ((uint32_t)(&USARTE0.DATA) >> (8*2)) & 0xFF;
-	DMA.CH0.DESTADDR0 = ((uint32_t)(&sensorDataPrime) >> (8*0)) & 0xFF;
-	DMA.CH0.DESTADDR1 = ((uint32_t)(&sensorDataPrime) >> (8*1)) & 0xFF;
-	DMA.CH0.DESTADDR2 = ((uint32_t)(&sensorDataPrime) >> (8*2)) & 0xFF;
-	// enable CH0, set to one byte bursts
 	DMA.CH0.CTRLA = DMA_CH_ENABLE_bm | DMA_CH_SINGLE_bm | DMA_CH_BURSTLEN_1BYTE_gc; 
+	}
+	if (SLAVE) {
+	DMA.CH1.ADDRCTRL = DMA_CH_SRCRELOAD_NONE_gc | DMA_CH_SRCDIR_FIXED_gc | DMA_CH_DESTRELOAD_TRANSACTION_gc | DMA_CH_DESTDIR_INC_gc;
+	DMA.CH1.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_RXC_gc;
+	DMA.CH1.SRCADDR0 = ((uint32_t)(&USARTE0.DATA) >> (8*0)) & 0xFF;
+	DMA.CH1.SRCADDR1 = ((uint32_t)(&USARTE0.DATA) >> (8*1)) & 0xFF;
+	DMA.CH1.SRCADDR2 = ((uint32_t)(&USARTE0.DATA) >> (8*2)) & 0xFF;
+	DMA.CH1.DESTADDR0 = ((uint32_t)(&sensorDataPrime) >> (8*0)) & 0xFF;
+	DMA.CH1.DESTADDR1 = ((uint32_t)(&sensorDataPrime) >> (8*1)) & 0xFF;
+	DMA.CH1.DESTADDR2 = ((uint32_t)(&sensorDataPrime) >> (8*2)) & 0xFF;
+	DMA.CH1.TRFCNT = 160;
+	DMA.CH1.REPCNT = 0;
+	DMA.CH1.CTRLA = DMA_CH_ENABLE_bm | DMA_CH_REPEAT_bm | DMA_CH_SINGLE_bm | DMA_CH_BURSTLEN_1BYTE_gc; 
+	}
 
 	getAlive();
 	getCalibrationData();
+
+	//if (SLAVE) { TCC0.PER = 1 << 15; startConversion(); }
 
 	PORTR.OUTSET = 1 << 1;
 	for (;;){}

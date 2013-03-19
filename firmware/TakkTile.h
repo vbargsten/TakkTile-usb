@@ -63,3 +63,5 @@ uint8_t bitmap[8];
 uint8_t sensorData[512];
 uint8_t sensorDataPrime[512];
 uint8_t calibrationData[512];
+bool SLAVE = 0;
+bool MASTER = 1;

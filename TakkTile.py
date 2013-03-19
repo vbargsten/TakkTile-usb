@@ -70,8 +70,10 @@ class TakkTile:
 		data = self.dev.read(0x81, 720, 0, 100)
 		try:
 			assert len(data) % 4 == 0
-			assert len(data)/4 == len(self.alive)
+			assert len(data)/4 == len(self.alive)*2
 		except:
+			print "got: ", len(data)
+			print "expected:", len(self.alive)*4
 			raise Exception("data read from USB endpoint is not correct length")
 		data = _chunk(data, 4)
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
@@ -113,8 +115,8 @@ class TakkTile:
 		# read the calibration data via vendor request and return it 
 		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 8))
 
-	def startSampling(self):
-		return self.dev.ctrl_transfer(0x40|0x80, 0xC7, 500, 0xFF, 1)[0]  
+	def startSampling(self, dt = 120):
+		return self.dev.ctrl_transfer(0x40|0x80, 0xC7, dt, 0xFF, 1)[0]  
 
 	def stopSampling(self):
 		return self.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
@@ -129,10 +131,11 @@ if __name__ == "__main__":
 	except:
 		count = 2
 	import time
-	tact.startSampling()
+	tact.startSampling(200)
 	start = time.time()
 	for i in range(count):
 		print(tact.getData())
 	end = time.time()
 	tact.stopSampling()
 	print (end-start)/int(count)
+	i = 0
