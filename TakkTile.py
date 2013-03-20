@@ -123,10 +123,6 @@ if __name__ == "__main__":
 	import sys, pprint
 	tact = TakkTile()
 	print tact.getAlive()
-	print tact.getAlive()
-	print tact.getAlive()
-	print tact.getAlive()
-	print tact.getAlive()
 	print tact.UID
 	try:
 		count = int(sys.argv[1])
