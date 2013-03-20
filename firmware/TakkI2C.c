@@ -30,8 +30,6 @@ inline void startConversion(){
 	// Initiates the analog-to-digital conversion of pressure and temperature
 	// on all MPL115A2 sensors on all attached rows.
 		
-	if (MASTER) PORTE.OUTSET = 1 << 1;
-
 	// enable all MPL115A2 by writing to 0x0C
 	uint8_t ACK = botherAddress(calcTinyAddr(0, 6), 1);
 	// write address byte of MPL115A2
@@ -45,8 +43,6 @@ inline void startConversion(){
 	TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	// if you got an ACK on enable, disable all the MPL115A2s
 	if (ACK == 1) botherAddress(calcTinyAddr(0, 6)^1, 1);
-
-	if (MASTER) PORTE.OUTCLR = 1 << 1;
 
 }
 
@@ -136,7 +132,8 @@ void getSensorData(void){
 	}
 	if (SLAVE) {
 		DMA.CH0.TRFCNT = 160;
-		DMA.CH0.CTRLA |= DMA_CH_ENABLE_bm | DMA_CH_TRFREQ_bm;
+		DMA.CH0.CTRLA |= DMA_CH_ENABLE_bm;
+		DMA.CH0.CTRLA |= DMA_CH_TRFREQ_bm;
 	}
 }
 

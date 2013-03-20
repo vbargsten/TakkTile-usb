@@ -30,16 +30,16 @@ int main(void){
 	PORTR.OUTCLR = 1 << 1;
 	_delay_ms(100);
 
-	USB_ConfigureClock();
 
 	// master-detect
 	PORTE.DIRCLR = 1 << 0;
 	// PE0 is daisy-chaining configuration pin
-//	if (PORTE.OUT & 1 << 0) { MASTER = 1; SLAVE = 0; }
+	if (PORTE.IN & (1 << 0)) { MASTER = 1; SLAVE = 0; }
 
-	if (MASTER) {
-		USB_Init();
+	USB_ConfigureClock();
+	USB_Init();
 		
+	if (MASTER) {
 		// Enable USB interrupts
 		USB.INTCTRLA = USB_BUSEVIE_bm | USB_INTLVL_MED_gc;
 		USB.INTCTRLB = USB_TRNIE_bm | USB_SETUPIE_bm;
@@ -67,13 +67,13 @@ int main(void){
 	USARTE0.BAUDCTRLA = 0;
 	USARTE0.BAUDCTRLB = 0;
 	USARTE0.CTRLC =  USART_PMODE_DISABLED_gc | USART_CHSIZE_8BIT_gc;
-	if (MASTER) USARTE0.CTRLB = USART_RXEN_bm;
-	if (SLAVE) USARTE0.CTRLB = USART_TXEN_bm;
+	if (MASTER) USARTE0.CTRLB |= USART_RXEN_bm;
+	if (SLAVE) USARTE0.CTRLB |= USART_TXEN_bm;
 
 	// configure general DMA settings
 	DMA.CTRL = DMA_ENABLE_bm | DMA_DBUFMODE_DISABLED_gc | DMA_PRIMODE_RR0123_gc;
 
-	if (MASTER) {
+	if (SLAVE) {
 	DMA.CH0.ADDRCTRL = DMA_CH_SRCRELOAD_TRANSACTION_gc | DMA_CH_SRCDIR_INC_gc | DMA_CH_DESTRELOAD_NONE_gc | DMA_CH_DESTDIR_FIXED_gc;
 	DMA.CH0.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_DRE_gc;
 	DMA.CH0.SRCADDR0 = ((uint32_t)(&sensorData) >> (8*0)) & 0xFF;
@@ -84,7 +84,7 @@ int main(void){
 	DMA.CH0.DESTADDR2 = ((uint32_t)(&USARTE0.DATA) >> (8*2)) & 0xFF;
 	DMA.CH0.CTRLA = DMA_CH_ENABLE_bm | DMA_CH_SINGLE_bm | DMA_CH_BURSTLEN_1BYTE_gc; 
 	}
-	if (SLAVE) {
+	if (MASTER) {
 	DMA.CH1.ADDRCTRL = DMA_CH_SRCRELOAD_NONE_gc | DMA_CH_SRCDIR_FIXED_gc | DMA_CH_DESTRELOAD_TRANSACTION_gc | DMA_CH_DESTDIR_INC_gc;
 	DMA.CH1.TRIGSRC = DMA_CH_TRIGSRC_USARTE0_RXC_gc;
 	DMA.CH1.SRCADDR0 = ((uint32_t)(&USARTE0.DATA) >> (8*0)) & 0xFF;
@@ -101,10 +101,15 @@ int main(void){
 	getAlive();
 	getCalibrationData();
 
-	//if (SLAVE) { TCC0.PER = 1 << 15; startConversion(); }
+	if (SLAVE && ~MASTER) {
+		TCC0.CNT = 0; 
+		TCC0.PER = 1 << 15; 
+		startConversion();
+	}
 
 	PORTR.OUTSET = 1 << 1;
-	for (;;){}
+	for (;;){
+	}
 }
 
 
