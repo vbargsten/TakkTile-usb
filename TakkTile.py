@@ -70,10 +70,10 @@ class TakkTile:
 		data = self.dev.read(0x81, 720, 0, 100)
 		try:
 			assert len(data) % 4 == 0
-			assert len(data)/4 == len(self.alive)*2
 		except:
 			print "got: ", len(data)
 			print "expected:", len(self.alive)*4
+			print data
 			raise Exception("data read from USB endpoint is not correct length")
 		data = _chunk(data, 4)
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
