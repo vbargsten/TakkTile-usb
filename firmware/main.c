@@ -178,6 +178,21 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				USB_ep0_send(40);
 				return true;
 
+			// robust vendor-request based data collection
+			// mnemonic - 0x6etData
+			case 0x6D:
+				if (req->wIndex == 0xFF) {
+					startConversion();
+					_delay_ms(2);
+					USB_ep0_send(0);
+					return true;
+				}
+				if (req->wIndex == 0x00) { 
+					for (uint8_t i = 0; i < 64; i++) {ep0_buf_in[i] = sensorData[i+(req->wValue*64)];}
+					USB_ep0_send(64);
+					return true;
+				}
+
 			// return calibration information
 			// mnemonic - 0x6etCalibration
 			case 0x6C: {
