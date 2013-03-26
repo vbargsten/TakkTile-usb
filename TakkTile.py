@@ -18,6 +18,7 @@ class TakkTile:
 	_getTinyAddressFromIndex = lambda self, index: (((index/5)&0x0F) << 4 | ((index%5)&0x07) << 1)
 
 	def __init__(self, arrayID = 0):
+		self.sampling = False
 		# search for a USB device with the proper VID/PID combo
 		self.dev = usb.core.find(idVendor=0x59e3, idProduct=0x74C7)
 		if self.dev == None:
@@ -67,14 +68,17 @@ class TakkTile:
 
 	def getDataRaw(self):
 		"""Query the TakkTile USB interface for the pressure and temperature samples from a specified row of sensors.."""
-		data = self.dev.read(0x81, 720, 0, 100)
-		try:
-			assert len(data) % 4 == 0
-		except:
-			print "got: ", len(data)
-			print "expected:", len(self.alive)*4
-			print data
-			raise Exception("data read from USB endpoint is not correct length")
+		if self.sampling:
+			data = self.dev.read(0x81, 720, 0, 100)
+			try:
+				assert len(data) % 4 == 0
+			except:
+				print "got: ", len(data)
+				print "expected:", len(self.alive)*4
+				print data
+				raise Exception("data read from USB endpoint is not correct length")
+		else:
+			raise Exception("sampling not started")
 		data = _chunk(data, 4)
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
@@ -89,7 +93,6 @@ class TakkTile:
 		"""Return measured pressure in kPa, temperature compensated and factory calibrated."""
 		# get raw 10b data
 		data = self.getDataRaw()
-		print 'self.getDataRaw():', data
 		# helper functions to increase readability
 		Padc = lambda cell: data[cell][0]
 		Tadc = lambda cell: data[cell][1]
@@ -116,9 +119,11 @@ class TakkTile:
 		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 8))
 
 	def startSampling(self, dt = 120):
+		self.sampling = True
 		return self.dev.ctrl_transfer(0x40|0x80, 0xC7, dt, 0xFF, 1)[0]  
 
 	def stopSampling(self):
+		self.sampling = False
 		return self.dev.ctrl_transfer(0x40|0x80, 0xC7, 0, 0, 1)[0]  
 
 if __name__ == "__main__":
