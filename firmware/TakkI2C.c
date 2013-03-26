@@ -6,6 +6,7 @@
 #include "TakkTile.h"
 
 inline uint8_t calcTinyAddr(uint8_t row, uint8_t column) { return (((row)&0x0F) << 4 | (column&0x07) << 1); }
+inline uint8_t calcTinyAddrFlat(uint8_t cell) { return (((cell/5)&0x0F) << 4 | ((cell%5)&0x07) << 1); }
 
 uint8_t botherAddress(uint8_t address, bool stop){
 	// Function to write address byte to I2C, returns 1 if ACK, 0 if NACK.
@@ -157,6 +158,20 @@ void getAlive(void){
 				_delay_us(5);
 			}
 		bitmap[row] = sensor_bm; 
+		}
+	}
+}
+
+void getAliveFlat(void){
+	_delay_ms(1);
+	for (uint8_t cell = 0; cell < 40; cell++){
+		uint8_t tinyAddr = calcTinyAddrFlat(cell);
+		if (botherAddress(tinyAddr, 1) == 1) {
+			_delay_us(5);
+			if (botherAddress(0xC0, 1) == 1) aliveCells[cell] = 0xFF;
+			_delay_us(5);
+			botherAddress(tinyAddr^1, 1);
+			_delay_us(5);
 		}
 	}
 }

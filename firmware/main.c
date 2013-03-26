@@ -178,6 +178,13 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 				USB_ep0_send(8);
 				return true;
 
+			case 0x5F: 
+				getAliveFlat();
+				_delay_ms(5);
+				for (uint8_t i = 0; i < 40; i++) {ep0_buf_in[i] = aliveCells[i];}
+				USB_ep0_send(40);
+				return true;
+
 			// return calibration information
 			// mnemonic - 0x6etCalibration
 			case 0x6C: {

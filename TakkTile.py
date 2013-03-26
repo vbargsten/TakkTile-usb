@@ -35,13 +35,8 @@ class TakkTile:
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
-		# get an eight byte bitmap of live sensors
-		bitmap = self.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 8)
-		# for each byte, convert it to binary format, trim off '0b', zerofill, and join to a shared string
-		bitmap = ''.join(map(lambda x: bin(x)[2::].zfill(5)[::-1], bitmap))
-		# find and return the index of all '1's
-		return [match.span()[0] for match in re.finditer('1', bitmap)] 
-	
+		data = self.dev.ctrl_transfer(0x40|0x80, 0x5F, 0, 0, 40)
+		return [i[0] for i in enumerate(data) if i[1] == 255]
 
 	def getCalibrationCoefficients(self, index):
 		""" This function implements the compensation & calibration coefficient calculations from page 15 of AN3785. """
