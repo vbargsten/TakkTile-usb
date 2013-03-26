@@ -113,7 +113,7 @@ class TakkTile:
 		"""Request the 12 calibration bytes from a sensor at a specified index."""
 		# get the attiny's virtual address for the specified index 
 		# read the calibration data via vendor request and return it 
-		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, index%5, index/5, 8))
+		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, index, 0, 8))
 
 	def startSampling(self, dt = 120):
 		self.sampling = True
