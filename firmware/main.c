@@ -98,7 +98,7 @@ int main(void){
 	DMA.CH1.CTRLA = DMA_CH_ENABLE_bm | DMA_CH_REPEAT_bm | DMA_CH_SINGLE_bm | DMA_CH_BURSTLEN_1BYTE_gc; 
 	}
 
-	getAlive();
+	getAliveFlat();
 	getCalibrationData();
 
 	if (SLAVE && ~MASTER) {
@@ -172,13 +172,6 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// return a bitmap of alive cells 
 			// mnemonic - 0x5Can
 			case 0x5C: 
-				getAlive();
-				_delay_ms(5);
-				for (uint8_t i = 0; i < 8; i++) {ep0_buf_in[i] = bitmap[i];}
-				USB_ep0_send(8);
-				return true;
-
-			case 0x5F: 
 				getAliveFlat();
 				_delay_ms(5);
 				for (uint8_t i = 0; i < 40; i++) {ep0_buf_in[i] = aliveCells[i];}

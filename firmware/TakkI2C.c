@@ -49,82 +49,78 @@ inline void startConversion(){
 
 void getCalibrationData(void){
 	// Iterate through all rows and all columns. If that cell is alive,
-	// read 12 calibration bytes from 0x04 into calibrationData.
-	
-	for (uint8_t row = 0; row < 8; row++) {
-		for (uint8_t column = 0; column < 5; column++) {
-			TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
-			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-			if ( (bitmap[row]&(1<<column)) == (1<<column) ){
-				// attiny address formula
-				uint8_t tinyAddr = calcTinyAddr(row, column); 
-				// enable cell
-				botherAddress(tinyAddr, 1);
-				// start write to MPL115A2 
-				botherAddress(0xC0, 0);
-				TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
-				// set start address to 0
-				TWIC.MASTER.DATA = 0x04;
-				while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-				// end transaction
-				TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-				// start read from MPL115A2
-				TWIC.MASTER.ADDR = 0xC1;
-				while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-				for (uint8_t byteCt = 0; byteCt < 8; byteCt++){
-					uint8_t index = 40*row+8*column+byteCt;
-					calibrationData[index] = TWIC.MASTER.DATA;
-					// if transaction isn't over, wait for ACK
-					if (byteCt < 7) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-					// if transaction is almost over, set next byte to NACK
-					if (byteCt == 6) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
-				}
-				botherAddress(tinyAddr^1, 1);
+	// read 8 calibration bytes from 0x04 into calibrationData.
+
+	for (uint8_t cell = 0; cell < 40; cell++) {
+		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+		if ( aliveCells[cell] == 0xFF ){
+			// attiny address formula
+			uint8_t tinyAddr = calcTinyAddrFlat(cell); 
+			// enable cell
+			botherAddress(tinyAddr, 1);
+			// start write to MPL115A2 
+			botherAddress(0xC0, 0);
+			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
+			// set start address to 0
+			TWIC.MASTER.DATA = 0x04;
+			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+			// end transaction
+			TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+			// start read from MPL115A2
+			TWIC.MASTER.ADDR = 0xC1;
+			while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+			for (uint8_t byteCt = 0; byteCt < 8; byteCt++){
+				uint8_t index = 8*cell+byteCt;
+				calibrationData[index] = TWIC.MASTER.DATA;
+				// if transaction isn't over, wait for ACK
+				if (byteCt < 7) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+				// if transaction is almost over, set next byte to NACK
+				if (byteCt == 6) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 			}
-			else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+			botherAddress(tinyAddr^1, 1);
 		}
+		else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	}
 }
 
 void getSensorData(void){
-	/* Iterate through all rows and all columns. If that cell is alive,
+	/* Iterate through all cells. If that cell is alive,
 	read four data bytes from memory address 0x00 into sensorData buffer.
 	If SLAVE, send sensorData buffer via DMA.
 	If MASTER, send sensorData and sensorDataPrime via USB. */
 	uint8_t datum = 0x00;
-	for (uint8_t row = 0; row < 8; row++) {
-		for (uint8_t column = 0; column < 5; column++) {
-			TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
-			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-			// attiny address formula
-			if ( (bitmap[row]&(1<<column)) == (1<<column) ){
-				uint8_t tinyAddr = calcTinyAddr(row, column); 
-				// enable cell
-				botherAddress(tinyAddr, 1);
-				// start write to MPL115A2
-				botherAddress(0xC0, 0);
-				TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;	 
-				// set start address to 0
-				TWIC.MASTER.DATA = 0x00;
-				while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-				// end transaction
-				TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-				// start read from MPL115A2
-				TWIC.MASTER.ADDR = 0xC1;
-				while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-				// clock out four bytes
-				for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
-					datum = TWIC.MASTER.DATA;
-					sensorData[(row*5 + column)*4 + byteCt] = datum;
-					// if transaction isn't over, wait for ACK
-					if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-					// if transaction is almost over, set next byte to NACK
-					if (byteCt == 2) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
-				}
-			botherAddress(tinyAddr^1, 1);
+	for (uint8_t cell = 0; cell < 40; cell++) {
+		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+		// attiny address formula
+		if ( aliveCells[cell] == 0xFF ) { 
+			uint8_t tinyAddr = calcTinyAddrFlat(cell); 
+			// enable cell
+			botherAddress(tinyAddr, 1);
+			// start write to MPL115A2
+			botherAddress(0xC0, 0);
+			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;	 
+			// set start address to 0
+			TWIC.MASTER.DATA = 0x00;
+			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+			// end transaction
+			TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+			// start read from MPL115A2
+			TWIC.MASTER.ADDR = 0xC1;
+			while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+			// clock out four bytes
+			for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
+				datum = TWIC.MASTER.DATA;
+				sensorData[(cell<<2) + byteCt] = datum;
+				// if transaction isn't over, wait for ACK
+				if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+				// if transaction is almost over, set next byte to NACK
+				if (byteCt == 2) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 			}
-			else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+		botherAddress(tinyAddr^1, 1);
 		}
+		else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	}
 	if (MASTER) {
 		for (uint8_t i = 0; i < 160; i++) send_byte(sensorData[i]);
@@ -138,29 +134,6 @@ void getSensorData(void){
 	}
 }
 
-
-void getAlive(void){
-	/* Iterate through rows and columns, generating a bitmap of alive sensors. */
-	_delay_ms(1);
-	for (uint8_t row = 0; row < 8; row++) {
-		uint8_t sensor_bm = 0;
-		for (uint8_t column = 0; column < 5; column++) {
-			// attiny address formula
-			uint8_t tinyAddr = calcTinyAddr(row, column); 
-			// if the write address ACKs....
-			if (botherAddress(tinyAddr, 1) == 1) {
-				_delay_us(5);
-				// ping the MPL115A2
-				if ( botherAddress(0xC0, 1) == 1 ) sensor_bm |= 1 << column;
-				// then turn off the sensor with an address LSB of 1
-				_delay_us(5);
-				botherAddress(tinyAddr^1, 1);
-				_delay_us(5);
-			}
-		bitmap[row] = sensor_bm; 
-		}
-	}
-}
 
 void getAliveFlat(void){
 	_delay_ms(1);

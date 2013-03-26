@@ -6,6 +6,7 @@
 import usb
 import re
 import itertools
+import atexit
 
 _unTwos = lambda x, bitlen: x-(1<<bitlen) if (x&(1<<(bitlen-1))) else x
 _chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
@@ -32,10 +33,11 @@ class TakkTile:
 		# populate self.UID with vendor request to get the xmega's serialNumber
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
 			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
+		atexit.register(self.stopSampling)
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
-		data = self.dev.ctrl_transfer(0x40|0x80, 0x5F, 0, 0, 40)
+		data = self.dev.ctrl_transfer(0x40|0x80, 0x5C, 0, 0, 40)
 		return [i[0] for i in enumerate(data) if i[1] == 255]
 
 	def getCalibrationCoefficients(self, index):
