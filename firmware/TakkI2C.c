@@ -122,7 +122,7 @@ void getSensorData(void){
 		}
 		else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 	}
-	if (MASTER) {
+	if (MASTER & ~timeout_or_sampling_no_longer_enabled){
 		for (uint8_t i = 0; i < 160; i++) send_byte(sensorData[i]);
 		for (uint8_t i = 0; i < 160; i++) send_byte(sensorDataPrime[i]);
 		break_and_flush();

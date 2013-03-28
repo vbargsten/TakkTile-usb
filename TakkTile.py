@@ -77,6 +77,7 @@ class TakkTile:
 		else:
 			# not sampling, so trigger a single shot conversion
 			data = self.dev.ctrl_transfer(0x40|0x80, 0x6D, 0xFF, 0xFF, 0)
+			data = self.dev.ctrl_transfer(0x40|0x80, 0x6D, 0x0F, 0x0F, 0)
 			# get page 0
 			data += tact.dev.ctrl_transfer(0x40|0x80, 0x6D, 0, 0, 64)
 			# get page 1

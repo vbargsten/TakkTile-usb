@@ -12,7 +12,7 @@
 
 bool SLAVE = 1;
 bool MASTER = 0;
-bool timeout_or_sampling_no_longer_enabled = 0;
+bool timeout_or_sampling_no_longer_enabled = 1;
 
 USB_PIPE(ep_in, 0x81 | USB_EP_PP, USB_EP_TYPE_BULK_gc, 64, 8, PIPE_ENABLE_FLUSH);
 

@@ -187,6 +187,11 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 					USB_ep0_send(0);
 					return true;
 				}
+				if (req->wIndex == 0x0F) {
+					getSensorData();
+					USB_ep0_send(0);
+					return true;
+				}
 				if (req->wIndex == 0x00) { 
 					for (uint8_t i = 0; i < 64; i++) {ep0_buf_in[i] = sensorData[i+(req->wValue*64)];}
 					USB_ep0_send(64);
