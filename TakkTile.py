@@ -78,15 +78,8 @@ class TakkTile:
 			# not sampling, so trigger a single shot conversion
 			data = self.dev.ctrl_transfer(0x40|0x80, 0x6D, 0xFF, 0xFF, 0)
 			data = self.dev.ctrl_transfer(0x40|0x80, 0x6D, 0x0F, 0x0F, 0)
-			# get page 0
-			data += tact.dev.ctrl_transfer(0x40|0x80, 0x6D, 0, 0, 64)
-			# get page 1
-			data += tact.dev.ctrl_transfer(0x40|0x80, 0x6D, 0, 1, 64)
-			# get page 2
-			data += tact.dev.ctrl_transfer(0x40|0x80, 0x6D, 0, 2, 64)
-			# get page 3
-			data += tact.dev.ctrl_transfer(0x40|0x80, 0x6D, 0, 3, 64)
-			#raise Exception("sampling not started")
+			for i in range(8):
+				data += tact.dev.ctrl_transfer(0x40|0x80, 0x6D, 0, 0, 64)
 		data = _chunk(data, 4)
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
