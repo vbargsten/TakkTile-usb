@@ -34,6 +34,8 @@ class TakkTile:
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
 			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
 		atexit.register(self.stopSampling)
+		# save data history for wrapping issue
+		self.pressureHistory = []
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
@@ -86,6 +88,28 @@ class TakkTile:
 		temperature = [datum[3] >> 6| datum[2] << 2 for datum in data if datum.count(0) != 4]
 		pressure = [datum[1] >> 6| datum[0] << 2 for datum in data if datum.count(0) != 4]
 		pressure = map(abs, pressure)
+
+		# dealing with wrapping aspect of the most significant bit
+		# 1) calculating delta (value_current-value_hostory);
+		# 	where delta_up is if the current value is positive
+		# 	and delta_down is if the current value is negative (i.e. significant bit indicates negative values)
+		# 2) it is assumed that the delta between subsequental readings will be smaller rather than bigger
+		# 	therefore the "smaller" delta between delta_up and delta_down is selected
+		#       and then it is added / substracted to the value_history
+
+		if (len(self.pressureHistory)>0):
+			i=0
+			for p_current in pressure:
+				p_history=self.pressureHistory[i]
+				delta_up=p_current-p_history
+				delta_down=p_history-(p_current-1024)
+				if (delta_up<delta_down):
+					pressure[i]=p_history+delta_up
+				else:
+					pressure[i]=p_history-delta_down
+				i+=1
+
+		self.pressureHistory=pressure
 		temperature = map(abs, temperature)
 		# return a dictionary mapping sensor indexes to a tuple containing (pressure, temperature)
 		return dict(zip(self.alive, zip(pressure, temperature)))
