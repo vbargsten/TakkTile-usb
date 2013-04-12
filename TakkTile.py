@@ -91,8 +91,8 @@ class TakkTile:
 
 		# dealing with wrapping aspect of the most significant bit
 		# 1) calculating delta (value_current-value_hostory);
-		# 	where delta_up is if the current value is positive
-		# 	and delta_down is if the current value is negative (i.e. significant bit indicates negative values)
+		# 	where delta_up is if the value_current is positive
+		# 	and delta_down is if the value_current is negative (i.e. significant bit indicates negative values)
 		# 2) it is assumed that the delta between subsequental readings will be smaller rather than bigger
 		# 	therefore the "smaller" delta between delta_up and delta_down is selected
 		#       and then it is added / substracted to the value_history
