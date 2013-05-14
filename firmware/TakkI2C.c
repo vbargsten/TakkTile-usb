@@ -47,41 +47,37 @@ inline void startConversion(){
 
 }
 
-void getCalibrationData(void){
+void getCalibrationData(uint8_t cell){
 	// Iterate through all rows and all columns. If that cell is alive,
 	// read 8 calibration bytes from 0x04 into calibrationData.
-
-	for (uint8_t cell = 0; cell < 40; cell++) {
-		TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
-		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
-		if ( aliveCells[cell] == 0xFF ){
-			// attiny address formula
-			uint8_t tinyAddr = calcTinyAddrFlat(cell); 
-			// enable cell
-			botherAddress(tinyAddr, 1);
-			// start write to MPL115A2 
-			botherAddress(0xC0, 0);
-			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
-			// set start address to 0
-			TWIC.MASTER.DATA = 0x04;
-			while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
-			// end transaction
-			TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
-			// start read from MPL115A2
-			TWIC.MASTER.ADDR = 0xC1;
-			while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-			for (uint8_t byteCt = 0; byteCt < 8; byteCt++){
-				uint8_t index = 8*cell+byteCt;
-				calibrationData[index] = TWIC.MASTER.DATA;
-				// if transaction isn't over, wait for ACK
-				if (byteCt < 7) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
-				// if transaction is almost over, set next byte to NACK
-				if (byteCt == 6) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
+	TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
+	TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
+	if ( aliveCells[cell] == 0xFF ){
+		// attiny address formula
+		uint8_t tinyAddr = calcTinyAddrFlat(cell); 
+		// enable cell
+		botherAddress(tinyAddr, 1);
+		// start write to MPL115A2 
+		botherAddress(0xC0, 0);
+		TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm; 
+		// set start address to 0
+		TWIC.MASTER.DATA = 0x04;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_WIF_bm));
+		// end transaction
+		TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+		// start read from MPL115A2
+		TWIC.MASTER.ADDR = 0xC1;
+		while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+		for (uint8_t byteCt = 0; byteCt < 8; byteCt++){
+			ep0_buf_in[byteCt] = TWIC.MASTER.DATA;
+			// if transaction isn't over, wait for ACK
+			if (byteCt < 7) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
+			// if transaction is almost over, set next byte to NACK
+			if (byteCt == 6) TWIC.MASTER.CTRLC |= TWI_MASTER_ACKACT_bm | TWI_MASTER_CMD_STOP_gc;
 			}
-			botherAddress(tinyAddr^1, 1);
-		}
-		else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
+		botherAddress(tinyAddr^1, 1);
 	}
+	else TWIC.MASTER.CTRLC |= TWI_MASTER_CMD_STOP_gc;
 }
 
 void getSensorData(void){

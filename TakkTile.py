@@ -45,7 +45,7 @@ class TakkTile:
 	def getCalibrationCoefficients(self, index):
 		""" This function implements the compensation & calibration coefficient calculations from page 15 of AN3785. """
 		# get raw calibration data from a specified location
-		cd = self.getCalibrationData(index) + [0, 0, 0, 0] 
+		cd = self.getCalibrationData(index) + [0, 0, 0, 0]
 		cc = {"a0":0, "b1":0, "b2":0, "c12":0, "c11":0, "c22":0}
 		# cell not alive
 		if max(cd) != 0:
@@ -85,8 +85,8 @@ class TakkTile:
 		data = _chunk(data, 4)
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
-		temperature = [datum[3] >> 6| datum[2] << 2 for datum in data if datum.count(0) != 4]
-		pressure = [datum[1] >> 6| datum[0] << 2 for datum in data if datum.count(0) != 4]
+		temperature = [datum[3] >> 6| datum[2] << 2 for datum in data] #if datum.count(0) != 4]
+		pressure = [datum[1] >> 6| datum[0] << 2 for datum in data] #if datum.count(0) != 4]
 		pressure = map(abs, pressure)
 
 		# dealing with wrapping aspect of the most significant bit
@@ -112,7 +112,9 @@ class TakkTile:
 		self.pressureHistory=pressure
 		temperature = map(abs, temperature)
 		# return a dictionary mapping sensor indexes to a tuple containing (pressure, temperature)
-		return dict(zip(self.alive, zip(pressure, temperature)))
+		new = dict([(i, (p, t)) for (i, (p, t)) in enumerate(zip(pressure, temperature)) if i in self.alive])
+		old = dict(zip(self.alive, zip(pressure, temperature)))
+		return new
 
 	def getData(self):
 		"""Return measured pressure in kPa, temperature compensated and factory calibrated."""
@@ -141,7 +143,7 @@ class TakkTile:
 		"""Request the 12 calibration bytes from a sensor at a specified index."""
 		# get the attiny's virtual address for the specified index 
 		# read the calibration data via vendor request and return it 
-		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, index, 0, 8))
+		return list(self.dev.ctrl_transfer(0x40|0x80, 0x6C, 0, index, 8))
 
 	def startSampling(self, dt = 120):
 		self.sampling = True
@@ -154,18 +156,17 @@ class TakkTile:
 if __name__ == "__main__":
 	import sys, pprint
 	tact = TakkTile()
-	print tact.getAlive()
 	print tact.UID
+	print tact.getAlive()
 	try:
 		count = int(sys.argv[1])
 	except:
 		count = 2
 	import time
-	#tact.startSampling(200)
+	tact.startSampling(200)
 	start = time.time()
 	for i in range(count):
 		print(tact.getData())
 	end = time.time()
 	tact.stopSampling()
 	print (end-start)/int(count)
-	i = 0

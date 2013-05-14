@@ -62,4 +62,3 @@ ISR(USB_TRNCOMPL_vect){
 uint8_t aliveCells[40];
 uint8_t sensorData[512];
 uint8_t sensorDataPrime[512];
-uint8_t calibrationData[512];

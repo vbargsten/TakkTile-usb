@@ -99,7 +99,7 @@ int main(void){
 	}
 
 	getAliveFlat();
-	getCalibrationData();
+	//getCalibrationData();
 
 	if (SLAVE && ~MASTER) {
 		TCC0.CNT = 0; 
@@ -201,10 +201,7 @@ bool EVENT_USB_Device_ControlRequest(USB_Request_Header_t* req){
 			// return calibration information
 			// mnemonic - 0x6etCalibration
 			case 0x6C: {
-				getCalibrationData();
-				_delay_ms(5);
-				uint8_t offset = 8*req->wIndex;
-				for (uint8_t i = 0; i < 8; i++) {ep0_buf_in[i] = calibrationData[offset+i];}
+				getCalibrationData(req->wIndex&0xFF);
 				USB_ep0_send(8);
 				return true;
 				}
