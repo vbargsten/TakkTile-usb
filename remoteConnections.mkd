@@ -1,0 +1,19 @@
+To utilize TakkTile's features for remote USB connections, a few modifications are required.
+
+The xmega on TakkTile uses a solder jumper on port E, pin 0, [to determine](https://github.com/TakkTile/TakkTile-usb/blob/master/firmware/main.c#L34) whether it is acting as a master or slave device.
+
+If the device is a master (with the solder jumper closed, pulling PE0 high), it will operate as a usb device as expected, but also accept information packets via a serial connection. Devices with the solder jumper open, and PE0 pulled low internally, will broadcast [160B information packets](https://github.com/TakkTile/TakkTile-usb/blob/master/firmware/TakkI2C.c#L126) via [3.3v serial at 2mbaud with one stop bit, and no parity bit](https://github.com/TakkTile/TakkTile-usb/blob/master/firmware/main.c#L64) at a rate of [100Hz.](https://github.com/TakkTile/TakkTile-usb/blob/master/firmware/main.c#L61)
+
+Slave devices require a ~5V supply, a ground connection, and for PE3 (TX) to be connected to PE2 (RX) on the master TakkTile / TakkFast board. 
+
+On these boards, the connections to be made are as follows, with the leftmost pin on the port marked "DAISY" referred to as P1.
+
+P1 master to P1 slave - (5V)
+
+P6 master to P6 slave - (GND)
+
+P5 slave to P4 master - (TX to RX)
+
+For best signal integrity, these wires should be twisted with an external shield tied to ground.
+
+It is worth noting that an external USB-serial device can be used to receive broadcast packets.
