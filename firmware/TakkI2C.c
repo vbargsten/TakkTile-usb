@@ -50,7 +50,7 @@ void getCalibrationData(void){
 	// read 12 calibration bytes from 0x04 into calibrationData.
 	
 	for (uint8_t row = 0; row < 8; row++) {
-		for (uint8_t column = 0; column < 5; column++) {
+		for (uint8_t column = 0; column < SENSORS_COLUMN; column++) {
 			TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
 			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 			if ( (bitmap[row]&(1<<column)) == (1<<column) ){
@@ -89,7 +89,7 @@ void getSensorData(void){
 	read four data bytes from memory address 0x00 into USB buffer via send_byte */
 	uint8_t datum = 0x00;
 	for (uint8_t row = 0; row < 8; row++) {
-		for (uint8_t column = 0; column < 5; column++) {
+		for (uint8_t column = 0; column < SENSORS_COLUMN; column++) {
 			TWIC.MASTER.CTRLC &= ~TWI_MASTER_ACKACT_bm;
 			TWIC.MASTER.CTRLB = TWI_MASTER_SMEN_bm;
 			// attiny address formula
@@ -112,7 +112,7 @@ void getSensorData(void){
 				for (uint8_t byteCt = 0; byteCt < 4; byteCt++){
 					datum = TWIC.MASTER.DATA;
 					send_byte(datum);
-					sensorData[(row*5 + column)*4 + byteCt] = datum;
+					sensorData[(row*SENSORS_COLUMN + column)*4 + byteCt] = datum;
 					// if transaction isn't over, wait for ACK
 					if (byteCt < 3) while(!(TWIC.MASTER.STATUS&TWI_MASTER_RIF_bm));
 					// if transaction is almost over, set next byte to NACK
@@ -132,7 +132,7 @@ void getAlive(void){
 
 	for (uint8_t row = 0; row < 8; row++) {
 		uint8_t sensor_bm = 0;
-		for (uint8_t column = 0; column < 5; column++) {
+		for (uint8_t column = 0; column < SENSORS_COLUMN; column++) {
 			// attiny address formula
 			uint8_t tinyAddr = calcTinyAddr(row, column); 
 			// if the write address ACKs....

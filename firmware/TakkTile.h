@@ -62,3 +62,5 @@ ISR(USB_TRNCOMPL_vect){
 uint8_t bitmap[8];
 uint8_t sensorData[512];
 uint8_t calibrationData[512];
+
+static const uint8_t SENSORS_COLUMN=6;
