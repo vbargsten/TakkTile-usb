@@ -33,8 +33,6 @@ class TakkTile:
 		self.startSampling()
 		self.dataPressureRawLog=self.getDataRaw()
 		self.dataPressureRawLog= [self.dataPressureRawLog[i][0] for i in self.alive]
-#		print("xxxx")
-#		print(zip(*(dict.values(self.dataPressureRawLog))))
 		self.stopSampling()
 		# populate self.UID with vendor request to get the xmega's serialNumber
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
