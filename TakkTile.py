@@ -8,7 +8,6 @@ import re
 import itertools
 
 _unTwos = lambda x, bitlen: x-(1<<bitlen) if (x&(1<<(bitlen-1))) else x
-_wrapping = lambda p_current, p_history: p_current if (p_current < (p_history+512)) else p_current-1024
 _chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
 _flatten = lambda l: list(itertools.chain(*[[x] if type(x) not in [list] else x for x in l]))
 
@@ -29,11 +28,6 @@ class TakkTile:
 		self.alive = self.getAlive()
 		# calibrationCoefficients is a dictionary mapping cell index to a dictionary of calibration variables 
 		self.calibrationCoefficients = dict(map(self.getCalibrationCoefficients, self.alive))
-		# dataRawLog are raw pressure values stored to resolve wrapping
-		self.startSampling()
-		self.dataPressureRawLog=self.getDataRaw()
-		self.dataPressureRawLog= [self.dataPressureRawLog[i][0] for i in self.alive]
-		self.stopSampling()
 		# populate self.UID with vendor request to get the xmega's serialNumber
 		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
 			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
@@ -83,27 +77,17 @@ class TakkTile:
 		# temperature is contained in the last two bytes of each four byte chunk, pressure in the first two
 		# each ten bit number is encoded in two bytes, MSB first, zero padded / left alligned
 		temperature = [_unTwos((datum[3] >> 6| datum[2] << 2), 10) for datum in data if datum.count(0) != 4]
-		# getting the raw data to compensate for wrapping later
-#		pressure = [_unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data if datum.count(0) != 4]
-		pressure = [((datum[1] >> 6| datum[0] << 2)) for datum in data if datum.count(0) != 4]
+		pressure = [_unTwos((datum[1] >> 6| datum[0] << 2), 10) for datum in data if datum.count(0) != 4]
 		pressure = map(abs, pressure)
 		temperature = map(abs, temperature)
 		# return a dictionary mapping sensor indexes to a tuple containing (pressure, temperature)
 		return dict(zip(self.alive, zip(pressure, temperature)))
 
-	def getDataSigned(self):
-		Padc = self.getDataRaw()
-		Tadc= [Padc[i][1] for i in self.alive]
-		# use logged data to calculate the sign when wrapping occurs
-		Padc = [_wrapping(Padc[i][0], self.dataPressureRawLog[i]) for i in self.alive]
-		self.dataPressureRawLog=Padc
-		# return a dictionary mapping sensor indexes to a tuple containing (pressure, temperature)
-		return dict(zip(self.alive, zip(Padc, Tadc)))		
-
 	def getData(self):
 		"""Return measured pressure in kPa, temperature compensated and factory calibrated."""
 		# get raw 10b data
 		data = self.getDataRaw()
+		#print 'self.getDataRaw():', data
 		# helper functions to increase readability
 		Padc = lambda cell: data[cell][0]
 		Tadc = lambda cell: data[cell][1]
