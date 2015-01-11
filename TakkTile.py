@@ -3,9 +3,13 @@
 # Written by Ian Daniher
 # Licensed under the terms of the GNU GPLv3+
 
+# updated Jan/1/2015 to include a number of TakkFast devices
+
 import usb
 import re
 import itertools
+import sys
+
 
 _unTwos = lambda x, bitlen: x-(1<<bitlen) if (x&(1<<(bitlen-1))) else x
 _chunk = lambda l, x: [l[i:i+x] for i in xrange(0, len(l), x)]
@@ -19,18 +23,34 @@ class TakkTile:
 
 	def __init__(self, arrayID = 0):
 		# search for a USB device with the proper VID/PID combo
-		self.dev = usb.core.find(idVendor=0x59e3, idProduct=0x74C7)
-		if self.dev == None:
+		self.devs = usb.core.find(find_all=1, idVendor=0x59e3, idProduct=0x74C7) 
+		if self.devs == None:
 			print("Can't find TakkTile USB interface!")
 			quit()
+
+		# if there are more than one device attached, then arrange by xmegas serial number.
+		dev_dict={}
+		for dev in self.devs:
+			# populate self.UID with vendor request to get the xmega's serialNumber
+			UID = dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
+				(usb.util.DESC_TYPE_STRING << 8) | dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
+			dev_dict.update({UID: dev})
+
+		self.devs = []
+		for key in sorted(dev_dict.iterkeys()):
+			self.devs.append(dev_dict[key])
+		self.UIDs=sorted(dev_dict.iterkeys())
+
 		self.arrayID = arrayID
+		self.dev=self.devs[arrayID]
+
 		# populates bitmap of live sensors
+		# for each following device add 50 indexs
 		self.alive = self.getAlive()
+
+		
 		# calibrationCoefficients is a dictionary mapping cell index to a dictionary of calibration variables 
-		self.calibrationCoefficients = dict(map(self.getCalibrationCoefficients, self.alive))
-		# populate self.UID with vendor request to get the xmega's serialNumber
-		self.UID = self.dev.ctrl_transfer(0x80, usb.REQ_GET_DESCRIPTOR, 
-			(usb.util.DESC_TYPE_STRING << 8) | self.dev.iSerialNumber, 0, 255)[2::].tostring().decode('utf-16')
+		self.calibrationCoefficients=(dict(map(self.getCalibrationCoefficients, self.alive)))
 
 	def getAlive(self):
 		""" Return an array containing the cell number of all alive cells. """
@@ -39,7 +59,7 @@ class TakkTile:
 		# for each byte, convert it to binary format, trim off '0b', zerofill, and join to a shared string
 		bitmap = ''.join(map(lambda x: bin(x)[2::].zfill(5)[::-1], bitmap))
 		# find and return the index of all '1's
-		return [match.span()[0] for match in re.finditer('1', bitmap)] 
+		return [match.span()[0] for match in re.finditer('1', bitmap)]
 	
 
 	def getCalibrationCoefficients(self, index):
@@ -122,17 +142,17 @@ class TakkTile:
 if __name__ == "__main__":
 	import sys, pprint
 	tact = TakkTile()
+	print tact.UIDs
 	print tact.alive
-	print tact.UID
 	try:
 		count = int(sys.argv[1])
 	except:
-		count = 2
+		count = 1
 	import time
 	tact.startSampling()
 	start = time.time()
 	for i in range(count):
-		print(tact.getData())
+		print(tact.getDataRaw())
 	end = time.time()
 	tact.stopSampling()
 	print (end-start)/int(count)
