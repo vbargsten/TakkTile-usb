@@ -45,8 +45,8 @@ class TakkTile:
 		self.dev=self.devs[arrayID]
 
 		# populates bitmap of live sensors
-		# for each following device add 50 indexs
-		self.alive = self.getAlive()
+		# for each following device offset 50 in indexing
+		self.alive = [x+arrayID*50 for x in self.getAlive()]
 
 		
 		# calibrationCoefficients is a dictionary mapping cell index to a dictionary of calibration variables 
