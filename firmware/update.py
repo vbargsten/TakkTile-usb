@@ -20,5 +20,5 @@ except IOError:
 	b.handle_args(sys.argv)
 	exit(0)
 
-print "can't find CEE or xmega in bootloader mode"
+print("can't find CEE or xmega in bootloader mode")
 exit(2)
